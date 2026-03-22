@@ -7,7 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
-        /* ========== ESTILOS (sin cambios) ========== */
+        /* ========== ESTILOS (idénticos) ========== */
         :root {
             --bg-color: #2c3e50;
             --text-color: #ecf0f1;
@@ -33,7 +33,7 @@
             display: flex;
             flex-direction: column;
         }
-        /* Popups (idénticos) */
+        /* Popups */
         #setup-screen, #coin-overlay, #import-overlay, #victory-overlay, #history-overlay, #multiplayer-setup {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: none; flex-direction: column; justify-content: center; align-items: center;
@@ -196,7 +196,7 @@
     <div id="import-overlay"><h2>📂 GESTIÓN DE DATOS</h2><div style="width:80%;max-width:300px;"><button class="btn-file btn-save" onclick="exportToFile()">💾 Guardar Archivo</button><button class="btn-file btn-load" onclick="document.getElementById('file-upload').click()">📂 Cargar Archivo</button><input type="file" id="file-upload" style="display:none;" accept=".json" onchange="importFromFile(this)"><button class="btn-sec" onclick="closeImportExport()">Cerrar</button></div></div>
     <div id="coin-overlay"><h2>¿Quién empieza?</h2><div class="coin-container"><div class="coin" id="the-coin"><div class="coin-face coin-front">...</div><div class="coin-face coin-back">...</div></div></div><h3 id="coin-result">...</h3></div>
     <div id="victory-overlay"><div class="winner-title">¡VICTORIA!</div><div class="winner-name" id="winner-name-text">NOMBRE</div><div id="pot-container"></div><button class="btn-main" onclick="closeVictory()">SIGUIENTE</button></div>
-    <div id="history-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleHistory(false);toggleMenu(true);">←</div><h2>📜 HISTORIAL</h2><table class="history-table"><thead> caption<th>#</th><th><span id="history-p1-name">J1</span></th><th><span id="history-p2-name">J2</span></th> </thead><tbody id="history-body"></tbody> </table><button class="btn-sec" onclick="toggleHistory(false)">Cerrar</button></div></div>
+    <div id="history-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleHistory(false);toggleMenu(true);">←</div><h2>📜 HISTORIAL</h2><table class="history-table"><thead><tr><th>#</th><th><span id="history-p1-name">J1</span></th><th><span id="history-p2-name">J2</span></th> </thead><tbody id="history-body"></tbody> </table><button class="btn-sec" onclick="toggleHistory(false)">Cerrar</button></div></div>
 
     <div class="top-bar">
         <div class="player-badge" id="p1-badge"><span class="p-name-live" id="p1-name-display">J1</span><span class="p-score-live" id="p1-score">0</span><div class="hearts-panel"><div class="heart-counter"><div class="icon-h icon-red"></div><span id="p1-red-count">0</span></div><div class="heart-counter"><div class="icon-h icon-gold"></div><span id="p1-gold-count">0</span></div></div></div>
@@ -392,7 +392,6 @@
                         syncState();
                         showCoinToss(starter === 1 ? gameState.p1.name : gameState.p2.name);
                     } else {
-                        // Segundo jugador: mostrar el overlay de moneda con mensaje de espera
                         document.getElementById('coin-overlay').style.display = 'flex';
                         document.getElementById('coin-result').textContent = 'Esperando al otro jugador...';
                     }
@@ -433,16 +432,16 @@
             updateActivePlayer();
             refreshBoardVisual();
 
-            // Si el overlay de moneda está visible y el estado tiene un currentPlayer válido, cerrar y mostrar resultado
+            // Si el overlay de moneda está visible, cerrarlo y mostrar quién empieza
             const coinOverlay = document.getElementById('coin-overlay');
             if (coinOverlay.style.display === 'flex') {
+                // Mostrar un pequeño mensaje antes de cerrar
                 const starterName = gameState.currentPlayer === 1 ? gameState.p1.name : gameState.p2.name;
-                document.getElementById('coin-result').textContent = `Empieza / Starts: ${starterName}`;
-                speak(`Empieza ${starterName}`);
-                startMusic(250);
+                document.getElementById('coin-result').textContent = "Empieza / Starts: " + starterName;
                 setTimeout(() => {
                     coinOverlay.style.display = 'none';
-                }, 1500);
+                    startMusic(250);
+                }, 1000);
             }
             waitingForSync = false;
         }
@@ -478,7 +477,8 @@
 
         function refreshBoardVisual() {
             const cards = document.querySelectorAll('.memory-card');
-            cards.forEach((card, idx) => {
+            cards.forEach(card => {
+                const idx = parseInt(card.dataset.index);
                 const status = gameState.cardStatus[idx];
                 if (status === 2) { card.classList.add('matched'); card.classList.remove('flip'); }
                 else if (status === 1) { card.classList.add('flip'); card.classList.remove('matched'); }
@@ -716,7 +716,7 @@
             matchData.history.forEach((m,i)=>{
                 let s1 = m.p1>m.p2?'💚':(m.p1<m.p2?'💔':'🤍');
                 let s2 = m.p2>m.p1?'💚':(m.p2<m.p1?'💔':'🤍');
-                tbody.insertAdjacentHTML('afterbegin', `有钱<td>${i+1}</td><td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td> </tr>`);
+                tbody.insertAdjacentHTML('afterbegin', `有钱<td>${i+1}</td><td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td></tr>`);
             });
             document.querySelector('.coin-front').textContent = gameState.p1.name;
             document.querySelector('.coin-back').textContent = gameState.p2.name;
