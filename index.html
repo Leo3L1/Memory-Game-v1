@@ -7,7 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
-        /* ========== ESTILOS (idénticos) ========== */
+        /* ========== ESTILOS ACTUALIZADOS ========== */
         :root {
             --bg-color: #2c3e50;
             --text-color: #ecf0f1;
@@ -95,8 +95,11 @@
         .content-area { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 10px; overflow: hidden; }
         .board-section { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .memory-game { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); gap: 8px; width: 100%; height: 100%; max-width: 600px; }
+        
+        /* CORRECCIÓN DE GIRO */
         .memory-card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.4s; cursor: pointer; }
-        .memory-card.flip { transform: rotateY(180deg); }
+        .memory-card.flip, .memory-card.matched { transform: rotateY(180deg); } /* Ambas clases mantienen el giro */
+        
         .memory-card.matched .front-face { background-color: #111 !important; opacity: 0.15; filter: grayscale(100%); box-shadow: none !important; border-color: #333; }
         .front-face { background: #ffffff; border: 2px solid #ddd; border-radius: 8px; width: 100%; height: 100%; position: absolute; backface-visibility: hidden; transform: rotateY(180deg); display: flex; justify-content: center; align-items: center; font-size: clamp(30px,10vmin,70px); transition: box-shadow 0.3s ease; }
         .memory-card.flip .front-face { border: 2px solid #fff; box-shadow: 0 0 15px var(--gold), 0 0 30px var(--gold); }
@@ -104,10 +107,8 @@
         .bottom-bar { flex: 0 0 auto; width: 100%; height: var(--bar-height); background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; padding: 10px 15px; z-index: 1000; border-top: 1px solid #444; }
         .play-menu-wrapper { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 10px; }
         #play-btn { background: linear-gradient(135deg, #4e9f7a, #2f855a); border: none; border-radius: 10px; padding: 14px 34px; min-width: 150px; font-size: 16px; font-weight: 600; color: white; box-shadow: 0 6px 18px rgba(0,0,0,0.35); transition: all 0.25s ease; }
-        #play-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
         #menu-btn { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: #2d3748; color: #ffffff; border-radius: 10px; transition: all 0.2s ease; }
         #exit-btn { position: fixed; right: 14px; bottom: 14px; width: 52px; height: 52px; background: linear-gradient(135deg, #ff4d4d, #c0392b); border: none; border-radius: 12px; color: white; font-size: 22px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); cursor: pointer; transition: all 0.25s ease; }
-        .tools-group-top { display: none !important; }
         .history-container { background: #2c3e50; padding: 20px; border-radius: 15px; border: 2px solid #555; width: 90%; max-width: 350px; max-height: 70vh; overflow-y: auto; }
         .history-table { width: 100%; border-collapse: collapse; text-align: center; }
         .history-table th { padding: 8px; color: #f1c40f; border-bottom: 2px solid #555; }
@@ -120,37 +121,6 @@
         .coin-face { position: absolute; width: 100%; height: 100%; border-radius: 50%; backface-visibility: hidden; display: flex; justify-content: center; align-items: center; text-align: center; font-size: 1.2rem; font-weight: bold; color: white; padding: 10px; word-break: break-word; line-height: 1.1; border: 8px solid white; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
         .coin-front { background-color: var(--active-p1); transform: rotateY(0deg); }
         .coin-back { background-color: var(--active-p2); transform: rotateY(180deg); }
-        .btn-file { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; color: white; cursor: pointer; text-align: center; }
-        .btn-save { background: #2980b9; }
-        .btn-load { background: #e67e22; }
-        #pot-container { position: relative; width: 320px; height: 300px; background: var(--glass-clear); backdrop-filter: blur(1.5px); border: 1px solid rgba(255,255,255,0.15); border-bottom: 2px solid rgba(255,255,255,0.25); border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%; box-shadow: inset 0 5px 15px rgba(255,255,255,0.05), 0 25px 50px rgba(0,0,0,0.7); transition: all 0.3s ease; margin-bottom: 20px; z-index: 9005; }
-        #pot-container::after { content: ''; position: absolute; top: 15%; left: 15%; width: 50px; height: 90px; background: var(--reflection); border-radius: 50%; transform: rotate(-15deg); filter: blur(1px); pointer-events: none; }
-        #pot-container::before { content: ''; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 200px; height: 40px; background: rgba(255,255,255,0.02); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; }
-        @keyframes goldBurstPot { 0% { box-shadow: inset 0 0 10px var(--gold); border-color: rgba(255,255,255,0.3); } 50% { box-shadow: 0 0 80px 30px rgba(255,215,0,0.9), inset 0 0 60px rgba(255,215,0,1); border-color: #fff; background: rgba(255,215,0,0.2); } 100% { box-shadow: inset 0 0 10px var(--gold); border-color: rgba(255,255,255,0.3); } }
-        .pot-flash { animation: goldBurstPot 3s ease-out forwards !important; }
-        canvas { position: absolute; top: 0; left: 0; border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%; filter: contrast(1.1) saturate(1.3) drop-shadow(0 4px 5px rgba(0,0,0,0.5)); }
-        #giant-gold-heart-container { position: fixed; top: 50%; left: 50%; width: 150px; height: 150px; transform: translate(-50%,-50%) scale(0); pointer-events: none; z-index: 10000; perspective: 1000px; display: none; }
-        .gold-heart-3d { width: 100%; height: 100%; background-image: url('https://cdn-icons-png.flaticon.com/512/210/210545.png'); background-size: contain; background-repeat: no-repeat; background-position: center; filter: sepia(1) saturate(8) hue-rotate(5deg) brightness(1.2) drop-shadow(0 10px 20px rgba(0,0,0,0.5)); transform-style: preserve-3d; will-change: transform; }
-        @keyframes heartSequenceToPot { 0% { transform: translate(-50%,-50%) scale(0) rotateY(0deg); opacity: 0; } 20% { transform: translate(-50%,-50%) scale(4) rotateY(180deg); opacity: 1; filter: drop-shadow(0 0 50px gold); } 40% { transform: translate(-50%,-50%) scale(4.2) rotateY(360deg); opacity: 1; } 98% { opacity: 1; } 100% { top: 72%; transform: translate(-50%,-50%) scale(0.6) rotateY(720deg); opacity: 0; } }
-        @keyframes heartSpinInPot { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-        .animate-heart-sequence { display: block !important; animation: heartSequenceToPot 3s ease-in-out forwards; }
-        .spinning-in-pot { display: block !important; top: 72%; transform: translate(-50%,-50%) scale(0.6); }
-        .spinning-in-pot .gold-heart-3d { animation: heartSpinInPot 4s linear infinite; filter: sepia(1) saturate(5) hue-rotate(5deg) brightness(1.1) drop-shadow(0 0 15px gold); }
-        .wildcard-front { background: white !important; color: gold; font-size: 60px; border: 3px solid gold !important; box-shadow: 0 0 15px gold, 0 0 30px gold inset; animation: neonPulse 1.2s infinite alternate; }
-        @keyframes neonPulse { from { box-shadow: 0 0 10px gold, 0 0 20px gold inset; } to { box-shadow: 0 0 25px gold, 0 0 50px gold inset; } }
-        .back-face.theme-silver { background: linear-gradient(135deg, #9aa0a6 0%, #cfd4d8 50%, #9aa0a6 100%); border: 2px solid #e5e5e5; box-shadow: 0 0 8px rgba(255,255,255,0.3); }
-        .back-face.theme-gold { background: linear-gradient(135deg, #c8a200 0%, #f5d76e 50%, #c8a200 100%); border: 2px solid #e6c200; box-shadow: 0 0 8px rgba(255,215,0,0.4); }
-        .back-face.theme-blue { background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #0f2027 100%); border: 2px solid #2c5364; box-shadow: 0 0 8px rgba(44,83,100,0.6); }
-        .back-face.theme-red { background: linear-gradient(135deg, #7b1e1e 0%, #c0392b 50%, #7b1e1e 100%); border: 2px solid #e74c3c; box-shadow: 0 0 8px rgba(231,76,60,0.5); }
-        .back-face.theme-pink { background: linear-gradient(135deg, #ff4da6 0%, #ff99cc 25%, #ffd6eb 50%, #ff99cc 75%, #ff4da6 100%); border: 3px solid #ff66cc; box-shadow: 0 0 15px rgba(255,105,180,0.6); }
-        #info-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 8500; }
-        .btn-info-glow { animation: infoGlow 1.2s infinite alternate; }
-        @keyframes infoGlow { from { box-shadow: 0 0 5px #1abc9c; } to { box-shadow: 0 0 20px #1abc9c; } }
-        .bottom-bar button[onclick*="devWinMatch"] { display: none !important; }
-        #menu-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display:none; justify-content:center; align-items:center; z-index:12000; }
-        .back-arrow { position: absolute; top: 14px; left: 14px; background: rgba(0,0,0,0.25); border: 2px solid #f1c40f; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: #f1c40f; font-size: 20px; cursor: pointer; transition: all 0.2s ease; z-index: 10; }
-        .back-arrow:hover { background: #f1c40f; color: #222; transform: scale(1.1); }
-        .multi-buttons { display: flex; gap: 20px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
         .room-code { font-size: 1.2rem; background: #2d3748; padding: 10px 20px; border-radius: 30px; margin: 15px 0; display: inline-block; color: var(--gold); }
     </style>
 </head>
@@ -161,25 +131,20 @@
         <h1 style="color:#f1c40f; margin-bottom:20px; font-size:2rem;">🐵 MEMORY</h1>
         <div class="input-group"><input type="text" id="p1-input" placeholder="Tu nombre / Your name"></div>
         <div class="input-group" style="margin-top:20px;">
-            <label style="color:#aaa; font-size:0.9rem; display:block; margin-bottom:5px;">Elige Cartas / Choose Theme:</label>
             <select id="theme-select">
                 <option value="animals">🐶 Animales / Animals</option>
                 <option value="flags">🇪🇸 Banderas / Flags</option>
                 <option value="objects">🚀 Objetos / Objects</option>
                 <option value="fruits">🍎 Frutas / Fruits</option>
-                <option value="mix">🎲 ¡MIX ALEATORIO! / RANDOM MIX!</option>
+                <option value="mix">🎲 ¡MIX! / RANDOM!</option>
             </select>
         </div>
-
-        <button class="btn-main" onclick="playButtonSound(); startLocalGame()">🎮 1 vs 1 (Local)</button>
 
         <div class="multi-buttons">
             <button class="btn-multi" onclick="playButtonSound(); showMultiplayerSetup('create')">🌐 Crear Sala</button>
             <button class="btn-multi" onclick="playButtonSound(); showMultiplayerSetup('join')">🔗 Unirse a Sala</button>
         </div>
-
         <button class="btn-sec" onclick="playButtonSound(); showImportExport()">📂 Datos / Data</button>
-        <button class="btn-sec" style="background:#c0392b; border-color:#922b21" onclick="playButtonSound(); fullReset()">🗑 Borrar Todo / Reset All</button>
     </div>
 
     <div id="multiplayer-setup">
@@ -193,26 +158,22 @@
         </div>
     </div>
 
-    <div id="import-overlay"><h2>📂 GESTIÓN DE DATOS</h2><div style="width:80%;max-width:300px;"><button class="btn-file btn-save" onclick="exportToFile()">💾 Guardar Archivo</button><button class="btn-file btn-load" onclick="document.getElementById('file-upload').click()">📂 Cargar Archivo</button><input type="file" id="file-upload" style="display:none;" accept=".json" onchange="importFromFile(this)"><button class="btn-sec" onclick="closeImportExport()">Cerrar</button></div></div>
     <div id="coin-overlay"><h2>¿Quién empieza?</h2><div class="coin-container"><div class="coin" id="the-coin"><div class="coin-face coin-front">...</div><div class="coin-face coin-back">...</div></div></div><h3 id="coin-result">...</h3></div>
-    <div id="victory-overlay"><div class="winner-title">¡VICTORIA!</div><div class="winner-name" id="winner-name-text">NOMBRE</div><div id="pot-container"></div><button class="btn-main" onclick="closeVictory()">SIGUIENTE</button></div>
-    <div id="history-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleHistory(false);toggleMenu(true);">←</div><h2>📜 HISTORIAL</h2><table class="history-table"><thead><tr><th>#</th><th><span id="history-p1-name">J1</span></th><th><span id="history-p2-name">J2</span></th> </thead><tbody id="history-body"></tbody> </table><button class="btn-sec" onclick="toggleHistory(false)">Cerrar</button></div></div>
-
+    <div id="victory-overlay"><div class="winner-title">¡VICTORIA!</div><div class="winner-name" id="winner-name-text">NOMBRE</div><button class="btn-main" onclick="closeVictory()">SIGUIENTE</button></div>
+    
     <div class="top-bar">
-        <div class="player-badge" id="p1-badge"><span class="p-name-live" id="p1-name-display">J1</span><span class="p-score-live" id="p1-score">0</span><div class="hearts-panel"><div class="heart-counter"><div class="icon-h icon-red"></div><span id="p1-red-count">0</span></div><div class="heart-counter"><div class="icon-h icon-gold"></div><span id="p1-gold-count">0</span></div></div></div>
-        <div class="player-badge" id="p2-badge"><span class="p-name-live" id="p2-name-display">J2</span><span class="p-score-live" id="p2-score">0</span><div class="hearts-panel"><div class="heart-counter"><div class="icon-h icon-red"></div><span id="p2-red-count">0</span></div><div class="heart-counter"><div class="icon-h icon-gold"></div><span id="p2-gold-count">0</span></div></div></div>
+        <div class="player-badge" id="p1-badge"><span class="p-name-live" id="p1-name-display">J1</span><span class="p-score-live" id="p1-score">0</span></div>
+        <div class="player-badge" id="p2-badge"><span class="p-name-live" id="p2-name-display">J2</span><span class="p-score-live" id="p2-score">0</span></div>
     </div>
 
     <div class="content-area"><div class="board-section"><div class="memory-game" id="tablero"></div></div></div>
 
-    <div class="bottom-bar"><div class="play-menu-wrapper"><button id="play-btn" class="btn-game btn-next" onclick="playButtonSound();">PLAY ▶</button><button id="menu-btn" class="btn-game" onclick="toggleMenu(true)">☰</button></div><button id="exit-btn" onclick="exitGame()">✕</button><button class="btn-game" style="background:#8e44ad" onclick="devWinMatch()">🏆 DEV WIN</button></div>
-
-    <div id="info-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleInfo(false);toggleMenu(true);">←</div><h2>📘 ¿Cómo se juega?</h2><div style="font-size:1rem; line-height:1.5; text-align:left;"><p><strong>🎯 Objetivo:</strong> Consigue más parejas que tu rival.</p><p><strong>🔄 Turno:</strong> Cada jugador gira 2 cartas. Si acierta, sigue. Si falla, cambia el turno.</p><p><strong>🏁 Final:</strong> Cuando se acaban las parejas, gana quien tenga más puntos.</p><p><strong>❤️ Corazones:</strong> Cada victoria da 1 rojo. Cada 2 rojos = 1 dorado 💛. Los dorados se acumulan en la vasija.</p><p><strong>✨ Comodín (💛):</strong> Si encuentras la pareja comodín, ganas una pareja extra automáticamente.</p><p><strong>💛 Poder Dorado:</strong> Haz clic en tu insignia superior para gastar un corazón dorado y activar el comodín (1 vez por turno).</p><p><strong>🌐 Multiplayer online:</strong> Crea una sala y comparte el código con tu rival.</p></div><button class="btn-sec" onclick="toggleInfo(false)">Cerrar</button></div></div>
-
-    <div id="menu-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleMenu(false)">←</div><h2>Menú</h2><button class="btn-sec" onclick="toggleMenu(false);goToMainMenu();">🏠 Menú Inicio</button><button class="btn-sec" onclick="toggleMenu(false);toggleHistory(true);">📜 Historial</button><button class="btn-sec" onclick="toggleMenu(false);toggleInfo(true);">ℹ Info</button><button class="btn-sec" onclick="toggleMenu(false)">Cerrar</button></div></div>
+    <div class="bottom-bar">
+        <button id="exit-btn" onclick="exitGame()">✕</button>
+    </div>
 
     <script>
-        // ========== FIREBASE CONFIGURACIÓN (TUS CREDENCIALES) ==========
+        // ========== FIREBASE CONFIGURACIÓN ==========
         const firebaseConfig = {
             apiKey: "AIzaSyBp41qQZvXPJHNY15FdxX1fcdAieUAedRg",
             authDomain: "memory-game-eyd.firebaseapp.com",
@@ -226,8 +187,6 @@
         const db = firebase.database();
 
         // ========== VARIABLES GLOBALES ==========
-        const HEART_LIMIT = 2;
-        const HEART_URL = 'https://cdn-icons-png.flaticon.com/512/210/210545.png';
         const THEMES = {
             animals: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯'],
             flags: ['🇪🇸','🇺🇸','🇫🇷','🇩🇪','🇮🇹','🇯🇵','🇨🇳','🇧🇷','🇬🇧','🇦🇷'],
@@ -236,56 +195,31 @@
         };
 
         let gameState = {
-            p1: {name:"", score:0, streak:0, failStreak:0},
-            p2: {name:"", score:0, streak:0, failStreak:0},
+            p1: {name:"", score:0},
+            p2: {name:"", score:0},
             currentPlayer: 1,
             pairsLeft: 10,
             isLocked: false,
             hasFlippedCard: false,
+            firstCardIdx: null,
+            firstVal: null,
             boardCards: [],
             cardStatus: [],
-            selectedTheme: 'animals',
-            matchId: "",
-            goldPowerUsed: false,
-            currentMelody: 'vivaldi'
+            selectedTheme: 'animals'
         };
-        let matchData = { p1Name: "", p2Name: "", history: [], p1Hearts: 0, p2Hearts: 0, p1GoldHearts: 0, p2GoldHearts: 0 };
-        let audioCtx = null;
-        let sequencerInterval = null;
-        let noteIndex = 0;
-        let menuMusicInterval = null;
-        let menuNoteIndex = 0;
-        let lastPhrase = "";
 
-        // Variables multiplayer
+        let isMultiplayer = false;
         let gameId = null;
         let playerId = null;
-        let isMultiplayer = false;
-        let remoteListener = null;
-        let waitingForSync = false;
+        let audioCtx = null;
 
-        // ========== FUNCIONES DE SONIDO ==========
-        const N = { c3:130.81,c4:261.63,d4:293.66,e4:329.63,f4:349.23,g4:392.00,a4:440.00,b4:493.88,c5:523.25,d5:587.33,e5:659.25,f5:698.46,g5:783.99,a5:880.00,b5:987.77,c6:1046.50 };
-        const SCORES = { vivaldi:[N.a4,N.c5,N.e5,N.a4,N.e5,N.c5,N.e5,N.a4,N.g4,N.b4,N.d5,N.g4,N.d5,N.b4,N.d5,N.g4], bach:[N.e4,N.b4,N.c5,N.d5,N.c5,N.b4,N.a4,N.a4,N.c5,N.e5,N.a4,N.g4,N.f4,N.e5,N.d5,N.f4], mozart:[N.c4,0,N.e4,0,N.g4,0,N.c5,0,N.g4,N.e4,N.c4,0,N.d4,N.f4,N.a4,0] };
-        const phrases = { success:["¡Ese {name} dándolo todo!","Ni tan mal, {name}.","¡Toma castaña, {name}!"], streak:["¡{name}, estás on fire!","¡Pasadle la corona a {name}!"], fail:["¡{name}, que se te va la pinza!","Eso ha sido el lag, ¿verdad {name}?"], failStreak:["¡{name}, hijo, que no es tan difícil!","¡Espabila, {name}!"], loser:["¡{name}, lo tuyo es el parchís!","¡Mi abuela juega mejor, {name}!"] };
+        function initAudio() { if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }
+        function playTone(freq,dur,vol=0.1) { if(!audioCtx) return; let o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.frequency.value=freq; g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur); }
+        function playButtonSound() { initAudio(); playTone(440, 0.1); }
 
-        function initAudio() { if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }
-        function playTone(freq,dur,vol=0.15,type='triangle'){ if(!audioCtx||freq<=0)return; let o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.setValueAtTime(0,audioCtx.currentTime); g.gain.linearRampToValueAtTime(vol,audioCtx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur); }
-        function playButtonSound(){ if(!audioCtx) initAudio(); const now=audioCtx.currentTime; const osc=audioCtx.createOscillator(),gain=audioCtx.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(523.25,now); osc.frequency.exponentialRampToValueAtTime(659.25,now+0.1); gain.gain.setValueAtTime(0.1,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.15); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now+0.15); }
-        function playMatchSound(){ if(!audioCtx) return; const now=audioCtx.currentTime; let osc=audioCtx.createOscillator(),gain=audioCtx.createGain(); osc.type='square'; osc.frequency.setValueAtTime(440,now); osc.frequency.exponentialRampToValueAtTime(880,now+0.1); gain.gain.setValueAtTime(0.1,now); gain.gain.linearRampToValueAtTime(0,now+0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now+0.1); }
-        function playTieSound(){ if(!audioCtx)return; const notes=[277.18,261.63,246.94,233.08]; notes.forEach((freq,i)=>{ setTimeout(()=>{ playTone(freq,(i===3?0.6:0.2),0.2); },i*250); }); }
-        function startMusic(speedMs){ stopMusic(); const score=SCORES[gameState.currentMelody]; sequencerInterval=setInterval(()=>{ let note=score[noteIndex%score.length]; playTone(note,(speedMs/1000)*0.9,0.04); noteIndex++; },speedMs); }
-        function stopMusic(){ if(sequencerInterval)clearInterval(sequencerInterval); noteIndex=0; }
-        function checkMusicSpeed(){ let speed=250; if(gameState.pairsLeft<=3)speed=120; else if(gameState.pairsLeft<=5)speed=180; startMusic(speed); }
-        function playVictoryMusic(){ let notes=[261.63,329.63,392.00,523.25],times=[0,200,400,600]; times.forEach((t,i)=>setTimeout(()=>playTone(notes[i],0.4,0.2),t)); setTimeout(()=>{ playTone(261.63,1.0,0.2); playTone(329.63,1.0,0.2); playTone(523.25,1.0,0.2); },800); }
-        function getPhrase(type,name){ let list=phrases[type]; let phrase=""; let att=0; do{ phrase=list[Math.floor(Math.random()*list.length)]; att++; }while(phrase===lastPhrase&&att<5); lastPhrase=phrase; return phrase.replace("{name}",name); }
-        function speak(t){ if(window.speechSynthesis){ window.speechSynthesis.cancel(); let u=new SpeechSynthesisUtterance(t); u.lang='es-ES'; u.rate=1.6; window.speechSynthesis.speak(u); } }
-
-        // ========== MULTIPLAYER ==========
+        // ========== MULTIPLAYER LOGIC ==========
         function showMultiplayerSetup(mode) {
             document.getElementById('multiplayer-setup').style.display = 'flex';
-            document.getElementById('multi-status').textContent = 'Conectando...';
-            document.getElementById('multi-code').innerHTML = '';
             if (mode === 'create') createRoom();
             else {
                 let code = prompt('Introduce el código de la sala:');
@@ -295,43 +229,35 @@
         }
 
         function createRoom() {
-            const playerName = document.getElementById('p1-input').value.trim() || "Jugador";
+            const name = document.getElementById('p1-input').value || "Host";
             const theme = document.getElementById('theme-select').value;
-            gameId = "game_" + Math.floor(Math.random() * 100000);
+            gameId = "game_" + Math.floor(Math.random() * 9999);
             playerId = 1;
             isMultiplayer = true;
 
-            // Generar tablero
-            let pool = (theme === 'mix') ? [...THEMES.animals, ...THEMES.flags, ...THEMES.objects, ...THEMES.fruits] : THEMES[theme];
-            pool.sort(() => Math.random() - 0.5);
-            let selection = pool.slice(0, 9);
-            selection.push('WILDCARD');
-            let boardCards = [...selection, ...selection];
-            boardCards.sort(() => Math.random() - 0.5);
-            let cardStatus = new Array(20).fill(0);
-
+            let pool = THEMES[theme] || THEMES.animals;
+            let selection = pool.slice(0, 10);
+            let board = [...selection, ...selection].sort(() => Math.random() - 0.5);
+            
             db.ref("games/" + gameId).set({
-                players: { p1: playerName, p2: null },
+                players: { p1: name, p2: null },
                 theme: theme,
-                boardCards: boardCards,
-                cardStatus: cardStatus,
-                state: {
-                    p1Score: 0, p2Score: 0,
-                    currentPlayer: 1,
-                    pairsLeft: 10,
-                    locked: false,
+                boardCards: board,
+                cardStatus: new Array(20).fill(0),
+                state: { 
+                    p1Score: 0, p2Score: 0, 
+                    currentPlayer: 1, 
+                    pairsLeft: 10, 
+                    locked: false, 
                     flipped: false,
-                    goldPowerUsed: false
+                    firstCardIdx: null,
+                    firstVal: null
                 },
                 ready: false
             }).then(() => {
-                document.getElementById('multi-status').textContent = 'Esperando a otro jugador...';
-                document.getElementById('multi-code').innerHTML = `Código de sala: <strong>${gameId}</strong>`;
+                document.getElementById('multi-status').textContent = 'Esperando oponente...';
+                document.getElementById('multi-code').innerHTML = `Código: <strong>${gameId}</strong>`;
                 startListening();
-            }).catch(err => {
-                console.error("Firebase error:", err);
-                alert("Error al crear sala: " + err.message);
-                cancelMultiplayer();
             });
         }
 
@@ -339,421 +265,176 @@
             gameId = code;
             playerId = 2;
             isMultiplayer = true;
+            const name = document.getElementById('p1-input').value || "Invitado";
 
-            db.ref("games/" + gameId).once("value").then(snapshot => {
-                const data = snapshot.val();
-                if (!data || !data.players || !data.players.p1) {
-                    alert('La sala no existe o no está disponible.');
-                    cancelMultiplayer();
-                    return;
-                }
-                const playerName = document.getElementById('p1-input').value.trim() || "Jugador";
-                db.ref("games/" + gameId + "/players/p2").set(playerName);
-                document.getElementById('multi-status').textContent = 'Conectado. Esperando al anfitrión...';
+            db.ref("games/" + gameId).once("value").then(snap => {
+                if (!snap.exists()) { alert("Sala no existe"); cancelMultiplayer(); return; }
+                db.ref("games/" + gameId + "/players/p2").set(name);
                 startListening();
-            }).catch(err => {
-                alert("Error al unirse: " + err.message);
-                cancelMultiplayer();
             });
         }
 
         function startListening() {
-            if (remoteListener) db.ref("games/" + gameId).off();
-            remoteListener = db.ref("games/" + gameId).on("value", (snapshot) => {
-                const data = snapshot.val();
+            db.ref("games/" + gameId).on("value", (snap) => {
+                const data = snap.val();
                 if (!data) return;
 
+                // Inicio de partida
                 if (data.players.p1 && data.players.p2 && !data.ready) {
                     db.ref("games/" + gameId + "/ready").set(true);
-                    // Inicializar juego
-                    gameState.selectedTheme = data.theme;
                     gameState.boardCards = data.boardCards;
-                    gameState.cardStatus = data.cardStatus.slice();
                     gameState.p1.name = data.players.p1;
                     gameState.p2.name = data.players.p2;
+                    document.getElementById('setup-screen').style.display = 'none';
+                    document.getElementById('multiplayer-setup').style.display = 'none';
+                    createBoard();
+                    updateUI();
+                }
+
+                // Sincronización de estado
+                if (data.state) {
                     gameState.p1.score = data.state.p1Score;
                     gameState.p2.score = data.state.p2Score;
                     gameState.currentPlayer = data.state.currentPlayer;
                     gameState.pairsLeft = data.state.pairsLeft;
                     gameState.isLocked = data.state.locked;
                     gameState.hasFlippedCard = data.state.flipped;
-                    gameState.goldPowerUsed = data.state.goldPowerUsed;
-
-                    document.getElementById('multiplayer-setup').style.display = 'none';
-                    document.getElementById('setup-screen').style.display = 'none';
-                    initAudio();
-                    createBoardFromData();
+                    gameState.firstCardIdx = data.state.firstCardIdx; // Crucial
+                    gameState.firstVal = data.state.firstVal;         // Crucial
+                    gameState.cardStatus = data.cardStatus || [];
+                    
                     updateUI();
-                    updateActivePlayer();
-
-                    if (playerId === 1) {
-                        const starter = Math.random() > 0.5 ? 1 : 2;
-                        gameState.currentPlayer = starter;
-                        syncState();
-                        showCoinToss(starter === 1 ? gameState.p1.name : gameState.p2.name);
-                    } else {
-                        document.getElementById('coin-overlay').style.display = 'flex';
-                        document.getElementById('coin-result').textContent = 'Esperando al otro jugador...';
-                    }
-                }
-
-                if (data.state && !waitingForSync) {
-                    applyRemoteState(data.state, data.cardStatus);
+                    refreshBoardVisual();
                 }
             });
         }
 
         function syncState() {
-            if (!isMultiplayer || !gameId) return;
-            const stateToSend = {
+            if (!isMultiplayer) return;
+            db.ref("games/" + gameId + "/state").set({
                 p1Score: gameState.p1.score,
                 p2Score: gameState.p2.score,
                 currentPlayer: gameState.currentPlayer,
                 pairsLeft: gameState.pairsLeft,
                 locked: gameState.isLocked,
                 flipped: gameState.hasFlippedCard,
-                goldPowerUsed: gameState.goldPowerUsed
-            };
-            db.ref("games/" + gameId + "/state").set(stateToSend);
+                firstCardIdx: gameState.firstCardIdx,
+                firstVal: gameState.firstVal
+            });
             db.ref("games/" + gameId + "/cardStatus").set(gameState.cardStatus);
         }
 
-        function applyRemoteState(remoteState, remoteCardStatus) {
-            waitingForSync = true;
-            gameState.p1.score = remoteState.p1Score;
-            gameState.p2.score = remoteState.p2Score;
-            gameState.currentPlayer = remoteState.currentPlayer;
-            gameState.pairsLeft = remoteState.pairsLeft;
-            gameState.isLocked = remoteState.locked;
-            gameState.hasFlippedCard = remoteState.flipped;
-            gameState.goldPowerUsed = remoteState.goldPowerUsed;
-            gameState.cardStatus = remoteCardStatus.slice();
-            updateUI();
-            updateActivePlayer();
-            refreshBoardVisual();
-
-            // Si el overlay de moneda está visible, cerrarlo y mostrar quién empieza
-            const coinOverlay = document.getElementById('coin-overlay');
-            if (coinOverlay.style.display === 'flex') {
-                // Mostrar un pequeño mensaje antes de cerrar
-                const starterName = gameState.currentPlayer === 1 ? gameState.p1.name : gameState.p2.name;
-                document.getElementById('coin-result').textContent = "Empieza / Starts: " + starterName;
-                setTimeout(() => {
-                    coinOverlay.style.display = 'none';
-                    startMusic(250);
-                }, 1000);
-            }
-            waitingForSync = false;
-        }
-
-        function createBoardFromData() {
+        // ========== GAME ENGINE ==========
+        function createBoard() {
             const t = document.getElementById('tablero');
             t.innerHTML = '';
-            const themeOpts = ['theme-silver','theme-gold','theme-blue','theme-red'];
-            const randTheme = themeOpts[Math.floor(Math.random()*themeOpts.length)];
-            gameState.boardCards.forEach((icon, idx) => {
-                const c = document.createElement('div');
-                c.className = 'memory-card';
-                c.dataset.index = idx;
-                if (icon === 'WILDCARD') {
-                    c.innerHTML = `<div class="front-face wildcard-front">💛</div><div class="back-face ${randTheme}"></div>`;
-                } else {
-                    let category = (gameState.selectedTheme === 'mix') ? getCategoryOfEmoji(icon) : gameState.selectedTheme;
-                    if (!category) category = 'animals';
-                    const code = Array.from(icon).map(e=>e.codePointAt(0).toString(16)).join('-');
-                    const svgPath = `emojis/${category}/${code}.svg`;
-                    const frontDiv = document.createElement('div'); frontDiv.className = 'front-face';
-                    const img = document.createElement('img'); img.className = 'emoji-svg'; img.alt = icon; img.src = svgPath;
-                    img.onerror = function() { this.style.display='none'; const fall=document.createElement('span'); fall.className='emoji-fallback'; fall.textContent=icon; this.parentElement.appendChild(fall); };
-                    frontDiv.appendChild(img);
-                    const backDiv = document.createElement('div'); backDiv.className = `back-face ${randTheme}`;
-                    c.appendChild(frontDiv); c.appendChild(backDiv);
-                }
-                c.onclick = () => flipCard(c, idx);
-                t.appendChild(c);
+            gameState.boardCards.forEach((emoji, i) => {
+                const card = document.createElement('div');
+                card.className = 'memory-card';
+                card.dataset.index = i;
+                card.innerHTML = `<div class="front-face">${emoji}</div><div class="back-face"></div>`;
+                card.onclick = () => flipCard(card, i);
+                t.appendChild(card);
             });
-            refreshBoardVisual();
+        }
+
+        function flipCard(card, i) {
+            if (gameState.isLocked || gameState.cardStatus[i] !== 0) return;
+            if (isMultiplayer && playerId !== gameState.currentPlayer) return;
+
+            initAudio();
+            playTone(500, 0.1);
+            
+            gameState.cardStatus[i] = 1; // 1 = flipped
+            
+            if (!gameState.hasFlippedCard) {
+                gameState.hasFlippedCard = true;
+                gameState.firstCardIdx = i;
+                gameState.firstVal = gameState.boardCards[i];
+                syncState();
+            } else {
+                gameState.isLocked = true;
+                const secondVal = gameState.boardCards[i];
+                syncState(); // Sincroniza el segundo giro antes de procesar
+
+                if (gameState.firstVal === secondVal) {
+                    setTimeout(matchSuccess, 600);
+                } else {
+                    setTimeout(matchFail, 1000);
+                }
+            }
+        }
+
+        function matchSuccess() {
+            gameState.cardStatus[gameState.firstCardIdx] = 2; // 2 = matched
+            gameState.cardStatus[gameState.secondCardIdx || 0] = 2; // Fallback
+            
+            // Si el índice actual no es el primero, es el segundo
+            const currentIdx = gameState.cardStatus.lastIndexOf(1);
+            if (currentIdx !== -1) gameState.cardStatus[currentIdx] = 2;
+
+            let p = gameState.currentPlayer === 1 ? gameState.p1 : gameState.p2;
+            p.score++;
+            gameState.pairsLeft--;
+            
+            resetTurnVars();
+            if (gameState.pairsLeft === 0) endGame();
+            syncState();
+        }
+
+        function matchFail() {
+            // Resetear solo las que estaban en estado 1 (flipped)
+            gameState.cardStatus = gameState.cardStatus.map(s => s === 1 ? 0 : s);
+            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+            resetTurnVars();
+            syncState();
+        }
+
+        function resetTurnVars() {
+            gameState.hasFlippedCard = false;
+            gameState.isLocked = false;
+            gameState.firstCardIdx = null;
+            gameState.firstVal = null;
         }
 
         function refreshBoardVisual() {
             const cards = document.querySelectorAll('.memory-card');
             cards.forEach(card => {
-                const idx = parseInt(card.dataset.index);
+                const idx = card.dataset.index;
                 const status = gameState.cardStatus[idx];
-                if (status === 2) { card.classList.add('matched'); card.classList.remove('flip'); }
-                else if (status === 1) { card.classList.add('flip'); card.classList.remove('matched'); }
-                else { card.classList.remove('flip','matched'); }
+                
+                // Si es 1 o 2, la carta DEBE estar rotada
+                if (status === 1 || status === 2) {
+                    card.classList.add('flip');
+                } else {
+                    card.classList.remove('flip');
+                }
+
+                // Si es 2, aplicamos estilo de completado
+                if (status === 2) card.classList.add('matched');
+                else card.classList.remove('matched');
             });
         }
 
-        function getCategoryOfEmoji(emoji) {
-            for (let k in THEMES) if (THEMES[k].includes(emoji)) return k;
-            return null;
-        }
-
-        function flipCard(card, idx) {
-            if (gameState.isLocked) return;
-            if (isMultiplayer && playerId !== gameState.currentPlayer) return;
-            if (gameState.cardStatus[idx] !== 0) return;
-
-            playTone(400,0.1,0.15);
-            gameState.cardStatus[idx] = 1;
-            refreshBoardVisual();
-
-            if (!gameState.hasFlippedCard) {
-                gameState.hasFlippedCard = true;
-                gameState.firstCardIdx = idx;
-                gameState.firstVal = gameState.boardCards[idx];
-            } else {
-                gameState.secondCardIdx = idx;
-                gameState.secondVal = gameState.boardCards[idx];
-                gameState.isLocked = true;
-                if (gameState.firstVal === gameState.secondVal) {
-                    setTimeout(() => matchSuccess(), 600);
-                } else {
-                    playTone(150,0.3,0.2);
-                    setTimeout(() => matchFail(), 1000);
-                }
-            }
-            if (isMultiplayer) syncState();
-        }
-
-        function matchSuccess() {
-            playMatchSound();
-            if (gameState.firstVal === 'WILDCARD') {
-                activateWildcardBonus(false);
-                return;
-            }
-            gameState.cardStatus[gameState.firstCardIdx] = 2;
-            gameState.cardStatus[gameState.secondCardIdx] = 2;
-            refreshBoardVisual();
-
-            let p = (gameState.currentPlayer === 1) ? gameState.p1 : gameState.p2;
-            p.score++;
-            p.streak++;
-            p.failStreak = 0;
-            gameState.pairsLeft--;
-            document.getElementById(gameState.currentPlayer===1?'p1-score':'p2-score').textContent = p.score;
-            let txt = p.streak>=2 ? getPhrase('streak',p.name) : getPhrase('success',p.name);
-            speak(txt);
-            checkMusicSpeed();
-            resetTurn();
-            if (gameState.pairsLeft===0) endGame();
-            if (isMultiplayer) syncState();
-        }
-
-        function matchFail() {
-            let p = (gameState.currentPlayer === 1) ? gameState.p1 : gameState.p2;
-            p.streak = 0;
-            p.failStreak++;
-            let txt = p.failStreak>=2 ? getPhrase('failStreak',p.name) : getPhrase('fail',p.name);
-            speak(txt);
-            gameState.cardStatus[gameState.firstCardIdx] = 0;
-            gameState.cardStatus[gameState.secondCardIdx] = 0;
-            refreshBoardVisual();
-            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-            updateActivePlayer();
-            resetTurn();
-            if (isMultiplayer) syncState();
-        }
-
-        function resetTurn() {
-            gameState.hasFlippedCard = false;
-            gameState.isLocked = false;
-            gameState.firstCardIdx = null;
-            gameState.secondCardIdx = null;
-            gameState.goldPowerUsed = false;
-        }
-
-        function activateWildcardBonus(isGoldPower) {
-            gameState.cardStatus[gameState.firstCardIdx] = 2;
-            gameState.cardStatus[gameState.secondCardIdx] = 2;
-            let p = (gameState.currentPlayer === 1) ? gameState.p1 : gameState.p2;
-            if (!isGoldPower) { p.score++; gameState.pairsLeft--; }
-
-            // Buscar pareja real restante
-            const remaining = [];
-            for (let i=0; i<gameState.cardStatus.length; i++) if (gameState.cardStatus[i]===0) remaining.push(i);
-            const valMap = {};
-            for (let idx of remaining) {
-                let val = gameState.boardCards[idx];
-                if (val !== 'WILDCARD') {
-                    if (!valMap[val]) valMap[val] = [];
-                    valMap[val].push(idx);
-                }
-            }
-            for (let val in valMap) {
-                if (valMap[val].length === 2) {
-                    const [a,b] = valMap[val];
-                    gameState.cardStatus[a] = 2;
-                    gameState.cardStatus[b] = 2;
-                    p.score++;
-                    gameState.pairsLeft--;
-                    break;
-                }
-            }
-            refreshBoardVisual();
-            document.getElementById(gameState.currentPlayer===1?'p1-score':'p2-score').textContent = p.score;
-
-            if (isGoldPower) { gameState.hasFlippedCard = false; gameState.isLocked = false; }
-            else resetTurn();
-            if (gameState.pairsLeft<=0) endGame();
-            if (isMultiplayer) syncState();
-        }
-
-        function useGoldPower() {
-            if (gameState.isLocked || gameState.goldPowerUsed) return;
-            if (isMultiplayer && playerId !== gameState.currentPlayer) return;
-            let goldCount = (gameState.currentPlayer===1) ? matchData.p1GoldHearts : matchData.p2GoldHearts;
-            if (goldCount <= 0) return;
-            if (gameState.currentPlayer===1) matchData.p1GoldHearts--;
-            else matchData.p2GoldHearts--;
-            gameState.goldPowerUsed = true;
-            saveMatchData();
-            updateUI();
-            playTone(523.25,0.25,0.25);
-            setTimeout(()=>playTone(659.25,0.3,0.25),120);
-            if (navigator.vibrate) navigator.vibrate(120);
-            activateWildcardBonus(true);
+        function updateUI() {
+            document.getElementById('p1-name-display').textContent = gameState.p1.name || "J1";
+            document.getElementById('p2-name-display').textContent = gameState.p2.name || "J2";
+            document.getElementById('p1-score').textContent = gameState.p1.score;
+            document.getElementById('p2-score').textContent = gameState.p2.score;
+            
+            document.getElementById('p1-badge').className = 'player-badge' + (gameState.currentPlayer === 1 ? ' active-p1' : '');
+            document.getElementById('p2-badge').className = 'player-badge' + (gameState.currentPlayer === 2 ? ' active-p2' : '');
         }
 
         function endGame() {
-            stopMusic();
-            let w = "Empate", winnerId = 0;
-            if (gameState.p1.score > gameState.p2.score) { w = gameState.p1.name; winnerId = 1; }
-            else if (gameState.p2.score > gameState.p1.score) { w = gameState.p2.name; winnerId = 2; }
-            if (w !== "Empate") {
-                playVictoryMusic(); throwConfetti();
-                document.getElementById('p'+winnerId+'-badge').classList.add('winner-badge');
-                document.getElementById('winner-name-text').textContent = w;
-                document.getElementById('victory-overlay').style.display = 'flex';
-                let currentHearts = (winnerId===1) ? matchData.p1Hearts : matchData.p2Hearts;
-                if (engine) {
-                    const { Composite, World } = Matter;
-                    const bodies = Composite.allBodies(engine.world);
-                    bodies.forEach(b => { if(['heart','activeHeart','goldHeart'].includes(b.label)) World.remove(engine.world, b); });
-                }
-                refillPot(currentHearts);
-                setTimeout(() => {
-                    dropWinningHeart();
-                    if (winnerId===1) matchData.p1Hearts++; else matchData.p2Hearts++;
-                    let newCount = (winnerId===1) ? matchData.p1Hearts : matchData.p2Hearts;
-                    if (newCount >= HEART_LIMIT) {
-                        if (winnerId===1) { matchData.p1Hearts = 0; matchData.p1GoldHearts++; }
-                        else { matchData.p2Hearts = 0; matchData.p2GoldHearts++; }
-                        saveMatchData(); updateUI();
-                        setTimeout(() => triggerGoldExplosion(winnerId), 1200);
-                    } else { saveMatchData(); updateUI(); setTimeout(() => fillPotWithGoldHearts(winnerId), 1000); }
-                }, 500);
-            } else playTieSound();
-            matchData.history.push({ p1: gameState.p1.score, p2: gameState.p2.score });
-            saveMatchData(); updateUI(); speak(w==="Empate"?"Empate":"Gana "+w);
-            if (isMultiplayer) {
-                if (remoteListener) db.ref("games/"+gameId).off();
-                setTimeout(() => { isMultiplayer=false; gameId=null; playerId=null; goToMainMenu(); }, 3000);
-            }
+            const winner = gameState.p1.score > gameState.p2.score ? gameState.p1.name : gameState.p2.name;
+            document.getElementById('winner-name-text').textContent = winner;
+            document.getElementById('victory-overlay').style.display = 'flex';
         }
 
-        function showCoinToss(winnerName) {
-            const ov = document.getElementById('coin-overlay');
-            const coin = document.getElementById('the-coin');
-            document.querySelector('.coin-front').textContent = gameState.p1.name;
-            document.querySelector('.coin-back').textContent = gameState.p2.name;
-            ov.style.display = 'flex';
-            document.getElementById('coin-result').textContent = "Lanzando...";
-            coin.style.transition = 'none';
-            coin.style.transform = 'rotateY(0deg)';
-            setTimeout(() => {
-                coin.style.transition = 'transform 2.5s ease-out';
-                const win = (winnerName === gameState.p1.name) ? 1 : 2;
-                coin.style.transform = `rotateY(${win === 1 ? 1800 : 1980}deg)`;
-                playTone(600,0.2);
-                setTimeout(() => {
-                    document.getElementById('coin-result').textContent = "Empieza / Starts: " + winnerName;
-                    speak("Empieza " + winnerName);
-                    startMusic(250);
-                    setTimeout(() => ov.style.display = 'none', 1500);
-                }, 2600);
-            }, 50);
-        }
-
-        function cancelMultiplayer() {
-            if (remoteListener) db.ref("games/"+gameId).off();
-            isMultiplayer = false;
-            gameId = null;
-            playerId = null;
-            document.getElementById('multiplayer-setup').style.display = 'none';
-            document.getElementById('setup-screen').style.display = 'flex';
-        }
-
-        // ========== JUEGO LOCAL (placeholder) ==========
-        function startLocalGame() {
-            alert("Modo local no implementado en esta demo, pero puedes jugar online.");
-        }
-
-        // ========== FUNCIONES DE FÍSICA (simplificadas) ==========
-        let engine, render, runner;
-        function initPhysics() { /* opcional */ }
-        function refillPot(count) {}
-        function dropWinningHeart() {}
-        function dropGoldHeart() {}
-        function fillPotWithGoldHearts(playerId) {}
-        function triggerGoldExplosion(winnerId) {}
-
-        // ========== UI COMÚN ==========
-        function updateUI() {
-            document.getElementById('p1-name-display').textContent = gameState.p1.name;
-            document.getElementById('p2-name-display').textContent = gameState.p2.name;
-            document.getElementById('p1-score').textContent = gameState.p1.score;
-            document.getElementById('p2-score').textContent = gameState.p2.score;
-            document.getElementById('p1-red-count').innerText = matchData.p1Hearts + "/" + HEART_LIMIT;
-            document.getElementById('p1-gold-count').innerText = matchData.p1GoldHearts;
-            document.getElementById('p2-red-count').innerText = matchData.p2Hearts + "/" + HEART_LIMIT;
-            document.getElementById('p2-gold-count').innerText = matchData.p2GoldHearts;
-            document.getElementById('history-p1-name').textContent = gameState.p1.name;
-            document.getElementById('history-p2-name').textContent = gameState.p2.name;
-            const tbody = document.getElementById('history-body'); tbody.innerHTML = '';
-            matchData.history.forEach((m,i)=>{
-                let s1 = m.p1>m.p2?'💚':(m.p1<m.p2?'💔':'🤍');
-                let s2 = m.p2>m.p1?'💚':(m.p2<m.p1?'💔':'🤍');
-                tbody.insertAdjacentHTML('afterbegin', `有钱<td>${i+1}</td><td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td></tr>`);
-            });
-            document.querySelector('.coin-front').textContent = gameState.p1.name;
-            document.querySelector('.coin-back').textContent = gameState.p2.name;
-        }
-
-        function updateActivePlayer() {
-            const b1 = document.getElementById('p1-badge'), b2 = document.getElementById('p2-badge');
-            if (gameState.currentPlayer === 1) { b1.classList.add('active-p1'); b2.classList.remove('active-p2'); }
-            else { b1.classList.remove('active-p1'); b2.classList.add('active-p2'); }
-        }
-
-        function goToMainMenu() { stopMusic(); document.getElementById('setup-screen').style.display = 'flex'; }
-        function exitGame() { if(confirm("¿Salir al menú principal?")) goToMainMenu(); }
-        function toggleMenu(show) { document.getElementById('menu-overlay').style.display = show ? 'flex' : 'none'; }
-        function toggleHistory(show) { document.getElementById('history-overlay').style.display = show ? 'flex' : 'none'; }
-        function toggleInfo(show) { document.getElementById('info-overlay').style.display = show ? 'flex' : 'none'; }
-        function showImportExport() { document.getElementById('import-overlay').style.display = 'flex'; }
-        function closeImportExport() { document.getElementById('import-overlay').style.display = 'none'; }
-        function exportToFile() { const dataStr=JSON.stringify(localStorage); const dataUri='data:application/json;charset=utf-8,'+encodeURIComponent(dataStr); let a=document.createElement('a'); a.setAttribute('href',dataUri); a.setAttribute('download','backup_memory.json'); a.click(); }
-        function importFromFile(input) { let file=input.files[0]; if(!file)return; let reader=new FileReader(); reader.onload=function(e){ try{ let data=JSON.parse(e.target.result); localStorage.clear(); for(let k in data) localStorage.setItem(k,data[k]); alert("✅ Datos Cargados"); location.reload(); }catch(err){ alert("❌ Error"); } }; reader.readAsText(file); }
-        function fullReset() { if(confirm("¿Borrar todo?")){ localStorage.clear(); location.reload(); } }
-        function loadMatchDataSafe() { try{ const json=localStorage.getItem(gameState.matchId); if(json){ const saved=JSON.parse(json); if(saved.p1Name.toLowerCase()===gameState.p2.name.toLowerCase()){ matchData={p1Name:saved.p2Name,p2Name:saved.p1Name,history:saved.history.map(h=>({p1:h.p2,p2:h.p1})),p1Hearts:saved.p2Hearts||0,p2Hearts:saved.p1Hearts||0,p1GoldHearts:saved.p2GoldHearts||0,p2GoldHearts:saved.p1GoldHearts||0}; } else matchData=saved; if(matchData.p1Hearts===undefined)matchData.p1Hearts=0; if(matchData.p2Hearts===undefined)matchData.p2Hearts=0; } else resetMatchData(); }catch(e){ resetMatchData(); } }
-        function resetMatchData() { matchData={p1Name:gameState.p1.name,p2Name:gameState.p2.name,history:[],p1Hearts:0,p2Hearts:0,p1GoldHearts:0,p2GoldHearts:0}; }
-        function saveMatchData() { try{ const data={p1Name:gameState.p1.name,p2Name:gameState.p2.name,history:matchData.history,p1Hearts:matchData.p1Hearts,p2Hearts:matchData.p2Hearts,p1GoldHearts:matchData.p1GoldHearts,p2GoldHearts:matchData.p2GoldHearts}; localStorage.setItem(gameState.matchId,JSON.stringify(data)); }catch(e){} }
-        function devWinMatch() { gameState.pairsLeft=0; gameState.isLocked=true; gameState.hasFlippedCard=false; if(gameState.currentPlayer===1){ gameState.p1.score=10; gameState.p2.score=0; }else{ gameState.p2.score=10; gameState.p1.score=0; } document.getElementById('p1-score').textContent=gameState.p1.score; document.getElementById('p2-score').textContent=gameState.p2.score; endGame(); }
-        function closeVictory() { document.getElementById('victory-overlay').style.display='none'; }
-        function throwConfetti() { const colors=['#e74c3c','#3498db','#f1c40f','#2ecc71','#9b59b6']; for(let i=0;i<150;i++){ const conf=document.createElement('div'); conf.classList.add('confetti'); conf.style.left=Math.random()*100+'vw'; conf.style.background=colors[Math.floor(Math.random()*colors.length)]; conf.style.animationDuration=(Math.random()*2+3)+'s'; conf.style.opacity=Math.random(); document.body.appendChild(conf); setTimeout(()=>conf.remove(),5000); } }
-
-        // Música de menú
-        function startMenuMusic() { if(menuMusicInterval)return; initAudio(); menuNoteIndex=0; const MENU_MUSIC=[261.63,329.63,392.00,523.25,196.00,246.94,392.00,493.88,220.00,261.63,329.63,440.00,174.61,220.00,349.23,440.00]; const SPEED=300; menuMusicInterval=setInterval(()=>{ let freq=MENU_MUSIC[menuNoteIndex%MENU_MUSIC.length]; playTone(freq,SPEED/1000*0.9,0.05,'triangle'); menuNoteIndex++; },SPEED); }
-        function stopMenuMusic() { if(menuMusicInterval){ clearInterval(menuMusicInterval); menuMusicInterval=null; } }
-
-        window.addEventListener('load', function() { startMenuMusic(); });
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('p1-badge').addEventListener('click',()=>{ if(gameState.currentPlayer===1) useGoldPower(); });
-            document.getElementById('p2-badge').addEventListener('click',()=>{ if(gameState.currentPlayer===2) useGoldPower(); });
-        });
+        function exitGame() { location.reload(); }
+        function closeVictory() { exitGame(); }
+        function cancelMultiplayer() { document.getElementById('multiplayer-setup').style.display = 'none'; }
     </script>
 </body>
 </html>
