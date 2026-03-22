@@ -196,7 +196,7 @@
     <div id="import-overlay"><h2>📂 GESTIÓN DE DATOS</h2><div style="width:80%;max-width:300px;"><button class="btn-file btn-save" onclick="exportToFile()">💾 Guardar Archivo</button><button class="btn-file btn-load" onclick="document.getElementById('file-upload').click()">📂 Cargar Archivo</button><input type="file" id="file-upload" style="display:none;" accept=".json" onchange="importFromFile(this)"><button class="btn-sec" onclick="closeImportExport()">Cerrar</button></div></div>
     <div id="coin-overlay"><h2>¿Quién empieza?</h2><div class="coin-container"><div class="coin" id="the-coin"><div class="coin-face coin-front">...</div><div class="coin-face coin-back">...</div></div></div><h3 id="coin-result">...</h3></div>
     <div id="victory-overlay"><div class="winner-title">¡VICTORIA!</div><div class="winner-name" id="winner-name-text">NOMBRE</div><div id="pot-container"></div><button class="btn-main" onclick="closeVictory()">SIGUIENTE</button></div>
-    <div id="history-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleHistory(false);toggleMenu(true);">←</div><h2>📜 HISTORIAL</h2><table class="history-table"><thead><tr><th>#</th><th><span id="history-p1-name">J1</span></th><th><span id="history-p2-name">J2</span></th> </thead><tbody id="history-body"></tbody> </table><button class="btn-sec" onclick="toggleHistory(false)">Cerrar</button></div></div>
+    <div id="history-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleHistory(false);toggleMenu(true);">←</div><h2>📜 HISTORIAL</h2><table class="history-table"><thead><tr><th>#</th><th><span id="history-p1-name">J1</span></th><th><span id="history-p2-name">J2</span></th> </thead><tbody id="history-body"></tbody>  </table><button class="btn-sec" onclick="toggleHistory(false)">Cerrar</button></div></div>
 
     <div class="top-bar">
         <div class="player-badge" id="p1-badge"><span class="p-name-live" id="p1-name-display">J1</span><span class="p-score-live" id="p1-score">0</span><div class="hearts-panel"><div class="heart-counter"><div class="icon-h icon-red"></div><span id="p1-red-count">0</span></div><div class="heart-counter"><div class="icon-h icon-gold"></div><span id="p1-gold-count">0</span></div></div></div>
@@ -405,9 +405,7 @@
 
         function syncState() {
             if (!isMultiplayer || !gameId) return;
-            // Solo el jugador activo (con turno) escribe estado
-            if (playerId !== gameState.currentPlayer) return;
-
+            // Solo el jugador que realiza la acción envía (ahora sin restricción de turno)
             const stateToSend = {
                 p1Score: gameState.p1.score,
                 p2Score: gameState.p2.score,
@@ -422,9 +420,6 @@
         }
 
         function applyRemoteState(remoteState, remoteCardStatus) {
-            // Si el jugador local está jugando (tiene el turno), ignora la actualización remota para no sobrescribir
-            if (playerId === gameState.currentPlayer) return;
-
             waitingForSync = true;
             gameState.p1.score = remoteState.p1Score;
             gameState.p2.score = remoteState.p2Score;
@@ -520,8 +515,7 @@
                     setTimeout(() => matchFail(), 1000);
                 }
             }
-            // Solo el jugador activo (con turno) sincroniza
-            if (isMultiplayer && playerId === gameState.currentPlayer) syncState();
+            if (isMultiplayer) syncState();
         }
 
         function matchSuccess() {
@@ -545,7 +539,7 @@
             checkMusicSpeed();
             resetTurn();
             if (gameState.pairsLeft===0) endGame();
-            if (isMultiplayer && playerId === gameState.currentPlayer) syncState();
+            if (isMultiplayer) syncState();
         }
 
         function matchFail() {
@@ -560,7 +554,7 @@
             gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
             updateActivePlayer();
             resetTurn();
-            if (isMultiplayer && playerId === gameState.currentPlayer) syncState();
+            if (isMultiplayer) syncState();
         }
 
         function resetTurn() {
@@ -604,7 +598,7 @@
             if (isGoldPower) { gameState.hasFlippedCard = false; gameState.isLocked = false; }
             else resetTurn();
             if (gameState.pairsLeft<=0) endGame();
-            if (isMultiplayer && playerId === gameState.currentPlayer) syncState();
+            if (isMultiplayer) syncState();
         }
 
         function useGoldPower() {
@@ -722,7 +716,7 @@
             matchData.history.forEach((m,i)=>{
                 let s1 = m.p1>m.p2?'💚':(m.p1<m.p2?'💔':'🤍');
                 let s2 = m.p2>m.p1?'💚':(m.p2<m.p1?'💔':'🤍');
-                tbody.insertAdjacentHTML('afterbegin', `有钱<td>${i+1}</td><td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td>`);
+                tbody.insertAdjacentHTML('afterbegin', `有钱晚<td>${i+1}</td><td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td></tr>`);
             });
             document.querySelector('.coin-front').textContent = gameState.p1.name;
             document.querySelector('.coin-back').textContent = gameState.p2.name;
