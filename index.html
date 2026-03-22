@@ -7,7 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
-        /* ========== ESTILOS ACTUALIZADOS ========== */
+        /* ========== ESTILOS (Originales mantenidos) ========== */
         :root {
             --bg-color: #2c3e50;
             --text-color: #ecf0f1;
@@ -96,9 +96,9 @@
         .board-section { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .memory-game { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); gap: 8px; width: 100%; height: 100%; max-width: 600px; }
         
-        /* CORRECCIÓN DE GIRO */
+        /* MODIFICACIÓN CRÍTICA: La clase matched también debe rotar la carta */
         .memory-card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.4s; cursor: pointer; }
-        .memory-card.flip, .memory-card.matched { transform: rotateY(180deg); } /* Ambas clases mantienen el giro */
+        .memory-card.flip, .memory-card.matched { transform: rotateY(180deg); } 
         
         .memory-card.matched .front-face { background-color: #111 !important; opacity: 0.15; filter: grayscale(100%); box-shadow: none !important; border-color: #333; }
         .front-face { background: #ffffff; border: 2px solid #ddd; border-radius: 8px; width: 100%; height: 100%; position: absolute; backface-visibility: hidden; transform: rotateY(180deg); display: flex; justify-content: center; align-items: center; font-size: clamp(30px,10vmin,70px); transition: box-shadow 0.3s ease; }
@@ -113,9 +113,6 @@
         .history-table { width: 100%; border-collapse: collapse; text-align: center; }
         .history-table th { padding: 8px; color: #f1c40f; border-bottom: 2px solid #555; }
         .history-table td { padding: 8px; border-bottom: 1px solid #444; }
-        .heart-badge { display: inline-flex; justify-content: center; align-items: center; width: 30px; height: 30px; position: relative; }
-        .heart-icon { font-size: 1.5rem; line-height: 1; }
-        .heart-score { position: absolute; font-size: 0.7rem; font-weight: 900; color: white; text-shadow: 1px 1px 1px black; top: 50%; left: 50%; transform: translate(-50%, -45%); }
         .coin-container { width: 160px; height: 160px; position: relative; perspective: 1000px; margin-bottom: 20px; }
         .coin { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; border-radius: 50%; }
         .coin-face { position: absolute; width: 100%; height: 100%; border-radius: 50%; backface-visibility: hidden; display: flex; justify-content: center; align-items: center; text-align: center; font-size: 1.2rem; font-weight: bold; color: white; padding: 10px; word-break: break-word; line-height: 1.1; border: 8px solid white; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
@@ -139,7 +136,6 @@
                 <option value="mix">🎲 ¡MIX! / RANDOM!</option>
             </select>
         </div>
-
         <div class="multi-buttons">
             <button class="btn-multi" onclick="playButtonSound(); showMultiplayerSetup('create')">🌐 Crear Sala</button>
             <button class="btn-multi" onclick="playButtonSound(); showMultiplayerSetup('join')">🔗 Unirse a Sala</button>
@@ -158,8 +154,9 @@
         </div>
     </div>
 
+    <div id="import-overlay"><h2>📂 GESTIÓN DE DATOS</h2><div style="width:80%;max-width:300px;"><button class="btn-file btn-save" onclick="exportToFile()">💾 Guardar Archivo</button><button class="btn-file btn-load" onclick="document.getElementById('file-upload').click()">📂 Cargar Archivo</button><input type="file" id="file-upload" style="display:none;" accept=".json" onchange="importFromFile(this)"><button class="btn-sec" onclick="closeImportExport()">Cerrar</button></div></div>
     <div id="coin-overlay"><h2>¿Quién empieza?</h2><div class="coin-container"><div class="coin" id="the-coin"><div class="coin-face coin-front">...</div><div class="coin-face coin-back">...</div></div></div><h3 id="coin-result">...</h3></div>
-    <div id="victory-overlay"><div class="winner-title">¡VICTORIA!</div><div class="winner-name" id="winner-name-text">NOMBRE</div><button class="btn-main" onclick="closeVictory()">SIGUIENTE</button></div>
+    <div id="victory-overlay"><div class="winner-title">¡VICTORIA!</div><div class="winner-name" id="winner-name-text">NOMBRE</div><div id="pot-container"></div><button class="btn-main" onclick="closeVictory()">SIGUIENTE</button></div>
     
     <div class="top-bar">
         <div class="player-badge" id="p1-badge"><span class="p-name-live" id="p1-name-display">J1</span><span class="p-score-live" id="p1-score">0</span></div>
@@ -168,9 +165,7 @@
 
     <div class="content-area"><div class="board-section"><div class="memory-game" id="tablero"></div></div></div>
 
-    <div class="bottom-bar">
-        <button id="exit-btn" onclick="exitGame()">✕</button>
-    </div>
+    <div class="bottom-bar"><div class="play-menu-wrapper"><button id="play-btn" class="btn-game btn-next" onclick="playButtonSound();">PLAY ▶</button><button id="menu-btn" class="btn-game" onclick="toggleMenu(true)">☰</button></div><button id="exit-btn" onclick="exitGame()">✕</button></div>
 
     <script>
         // ========== FIREBASE CONFIGURACIÓN ==========
@@ -205,19 +200,22 @@
             firstVal: null,
             boardCards: [],
             cardStatus: [],
-            selectedTheme: 'animals'
+            selectedTheme: 'animals',
+            goldPowerUsed: false
         };
 
         let isMultiplayer = false;
         let gameId = null;
         let playerId = null;
+        let remoteListener = null;
+        let waitingForSync = false;
         let audioCtx = null;
 
         function initAudio() { if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }
         function playTone(freq,dur,vol=0.1) { if(!audioCtx) return; let o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.frequency.value=freq; g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur); }
         function playButtonSound() { initAudio(); playTone(440, 0.1); }
 
-        // ========== MULTIPLAYER LOGIC ==========
+        // ========== MULTIPLAYER ==========
         function showMultiplayerSetup(mode) {
             document.getElementById('multiplayer-setup').style.display = 'flex';
             if (mode === 'create') createRoom();
@@ -229,7 +227,7 @@
         }
 
         function createRoom() {
-            const name = document.getElementById('p1-input').value || "Host";
+            const name = document.getElementById('p1-input').value.trim() || "Host";
             const theme = document.getElementById('theme-select').value;
             gameId = "game_" + Math.floor(Math.random() * 9999);
             playerId = 1;
@@ -245,13 +243,8 @@
                 boardCards: board,
                 cardStatus: new Array(20).fill(0),
                 state: { 
-                    p1Score: 0, p2Score: 0, 
-                    currentPlayer: 1, 
-                    pairsLeft: 10, 
-                    locked: false, 
-                    flipped: false,
-                    firstCardIdx: null,
-                    firstVal: null
+                    p1Score: 0, p2Score: 0, currentPlayer: 1, pairsLeft: 10, 
+                    locked: false, flipped: false, firstCardIdx: null, firstVal: null 
                 },
                 ready: false
             }).then(() => {
@@ -265,8 +258,7 @@
             gameId = code;
             playerId = 2;
             isMultiplayer = true;
-            const name = document.getElementById('p1-input').value || "Invitado";
-
+            const name = document.getElementById('p1-input').value.trim() || "Invitado";
             db.ref("games/" + gameId).once("value").then(snap => {
                 if (!snap.exists()) { alert("Sala no existe"); cancelMultiplayer(); return; }
                 db.ref("games/" + gameId + "/players/p2").set(name);
@@ -275,11 +267,11 @@
         }
 
         function startListening() {
-            db.ref("games/" + gameId).on("value", (snap) => {
+            if (remoteListener) db.ref("games/" + gameId).off();
+            remoteListener = db.ref("games/" + gameId).on("value", (snap) => {
                 const data = snap.val();
                 if (!data) return;
 
-                // Inicio de partida
                 if (data.players.p1 && data.players.p2 && !data.ready) {
                     db.ref("games/" + gameId + "/ready").set(true);
                     gameState.boardCards = data.boardCards;
@@ -291,26 +283,14 @@
                     updateUI();
                 }
 
-                // Sincronización de estado
-                if (data.state) {
-                    gameState.p1.score = data.state.p1Score;
-                    gameState.p2.score = data.state.p2Score;
-                    gameState.currentPlayer = data.state.currentPlayer;
-                    gameState.pairsLeft = data.state.pairsLeft;
-                    gameState.isLocked = data.state.locked;
-                    gameState.hasFlippedCard = data.state.flipped;
-                    gameState.firstCardIdx = data.state.firstCardIdx; // Crucial
-                    gameState.firstVal = data.state.firstVal;         // Crucial
-                    gameState.cardStatus = data.cardStatus || [];
-                    
-                    updateUI();
-                    refreshBoardVisual();
+                if (data.state && !waitingForSync) {
+                    applyRemoteState(data.state, data.cardStatus);
                 }
             });
         }
 
         function syncState() {
-            if (!isMultiplayer) return;
+            if (!isMultiplayer || !gameId) return;
             db.ref("games/" + gameId + "/state").set({
                 p1Score: gameState.p1.score,
                 p2Score: gameState.p2.score,
@@ -324,7 +304,23 @@
             db.ref("games/" + gameId + "/cardStatus").set(gameState.cardStatus);
         }
 
-        // ========== GAME ENGINE ==========
+        function applyRemoteState(remoteState, remoteCardStatus) {
+            waitingForSync = true;
+            gameState.p1.score = remoteState.p1Score;
+            gameState.p2.score = remoteState.p2Score;
+            gameState.currentPlayer = remoteState.currentPlayer;
+            gameState.pairsLeft = remoteState.pairsLeft;
+            gameState.isLocked = remoteState.locked;
+            gameState.hasFlippedCard = remoteState.flipped;
+            gameState.firstCardIdx = remoteState.firstCardIdx;
+            gameState.firstVal = remoteState.firstVal;
+            gameState.cardStatus = remoteCardStatus || [];
+            updateUI();
+            refreshBoardVisual();
+            waitingForSync = false;
+        }
+
+        // ========== ENGINE DEL JUEGO ==========
         function createBoard() {
             const t = document.getElementById('tablero');
             t.innerHTML = '';
@@ -344,18 +340,20 @@
 
             initAudio();
             playTone(500, 0.1);
-            
-            gameState.cardStatus[i] = 1; // 1 = flipped
-            
+            gameState.cardStatus[i] = 1; 
+
             if (!gameState.hasFlippedCard) {
                 gameState.hasFlippedCard = true;
                 gameState.firstCardIdx = i;
                 gameState.firstVal = gameState.boardCards[i];
                 syncState();
+                refreshBoardVisual();
             } else {
                 gameState.isLocked = true;
+                gameState.secondCardIdx = i;
                 const secondVal = gameState.boardCards[i];
-                syncState(); // Sincroniza el segundo giro antes de procesar
+                syncState();
+                refreshBoardVisual();
 
                 if (gameState.firstVal === secondVal) {
                     setTimeout(matchSuccess, 600);
@@ -366,28 +364,24 @@
         }
 
         function matchSuccess() {
-            gameState.cardStatus[gameState.firstCardIdx] = 2; // 2 = matched
-            gameState.cardStatus[gameState.secondCardIdx || 0] = 2; // Fallback
-            
-            // Si el índice actual no es el primero, es el segundo
-            const currentIdx = gameState.cardStatus.lastIndexOf(1);
-            if (currentIdx !== -1) gameState.cardStatus[currentIdx] = 2;
-
+            gameState.cardStatus[gameState.firstCardIdx] = 2;
+            gameState.cardStatus[gameState.secondCardIdx] = 2;
             let p = gameState.currentPlayer === 1 ? gameState.p1 : gameState.p2;
             p.score++;
             gameState.pairsLeft--;
-            
             resetTurnVars();
             if (gameState.pairsLeft === 0) endGame();
             syncState();
+            refreshBoardVisual();
         }
 
         function matchFail() {
-            // Resetear solo las que estaban en estado 1 (flipped)
-            gameState.cardStatus = gameState.cardStatus.map(s => s === 1 ? 0 : s);
+            gameState.cardStatus[gameState.firstCardIdx] = 0;
+            gameState.cardStatus[gameState.secondCardIdx] = 0;
             gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
             resetTurnVars();
             syncState();
+            refreshBoardVisual();
         }
 
         function resetTurnVars() {
@@ -402,17 +396,9 @@
             cards.forEach(card => {
                 const idx = card.dataset.index;
                 const status = gameState.cardStatus[idx];
-                
-                // Si es 1 o 2, la carta DEBE estar rotada
-                if (status === 1 || status === 2) {
-                    card.classList.add('flip');
-                } else {
-                    card.classList.remove('flip');
-                }
-
-                // Si es 2, aplicamos estilo de completado
-                if (status === 2) card.classList.add('matched');
-                else card.classList.remove('matched');
+                if (status === 2) { card.classList.add('matched'); card.classList.remove('flip'); }
+                else if (status === 1) { card.classList.add('flip'); card.classList.remove('matched'); }
+                else { card.classList.remove('flip', 'matched'); }
             });
         }
 
@@ -421,20 +407,23 @@
             document.getElementById('p2-name-display').textContent = gameState.p2.name || "J2";
             document.getElementById('p1-score').textContent = gameState.p1.score;
             document.getElementById('p2-score').textContent = gameState.p2.score;
-            
-            document.getElementById('p1-badge').className = 'player-badge' + (gameState.currentPlayer === 1 ? ' active-p1' : '');
-            document.getElementById('p2-badge').className = 'player-badge' + (gameState.currentPlayer === 2 ? ' active-p2' : '');
+            const b1 = document.getElementById('p1-badge'), b2 = document.getElementById('p2-badge');
+            if (gameState.currentPlayer === 1) { b1.classList.add('active-p1'); b2.classList.remove('active-p2'); }
+            else { b1.classList.remove('active-p1'); b2.classList.add('active-p2'); }
         }
 
+        // ========== FUNCIONES DE RELLENO (Física/UI) ==========
         function endGame() {
             const winner = gameState.p1.score > gameState.p2.score ? gameState.p1.name : gameState.p2.name;
             document.getElementById('winner-name-text').textContent = winner;
             document.getElementById('victory-overlay').style.display = 'flex';
         }
-
         function exitGame() { location.reload(); }
         function closeVictory() { exitGame(); }
-        function cancelMultiplayer() { document.getElementById('multiplayer-setup').style.display = 'none'; }
+        function cancelMultiplayer() { if (remoteListener) db.ref("games/"+gameId).off(); location.reload(); }
+        function toggleMenu(s) { }
+        function showImportExport() { document.getElementById('import-overlay').style.display='flex'; }
+        function closeImportExport() { document.getElementById('import-overlay').style.display='none'; }
     </script>
 </body>
 </html>
