@@ -178,8 +178,11 @@
             <button class="btn-multi" onclick="playButtonSound(); showMultiplayerSetup('join')">🔗 Unirse a Sala</button>
         </div>
 
-        <button class="btn-sec" onclick="playButtonSound(); showImportExport()">📂 Datos / Data</button>
-        <button class="btn-sec" style="background:#c0392b; border-color:#922b21" onclick="playButtonSound(); fullReset()">🗑 Borrar Todo / Reset All</button>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+            <button class="btn-sec" onclick="playButtonSound(); showImportExport()">📂 Datos / Data</button>
+            <button class="btn-sec" style="background:#c0392b; border-color:#922b21" onclick="playButtonSound(); fullReset()">🗑 Borrar Todo / Reset All</button>
+            <button class="btn-sec" style="background:#e67e22; border-color:#b45f1b" onclick="limpiarTodasLasSalas()">🗑 Limpiar Salas Firebase</button>
+        </div>
     </div>
 
     <div id="multiplayer-setup">
@@ -697,9 +700,58 @@
             return null;
         }
 
-        function useGoldPower() { /* igual que antes, pero añadir sync si multiplayer */ }
+        function useGoldPower() {
+            if (gameState.isLocked || gameState.goldPowerUsed) return;
+            if (isMultiplayer && playerId !== gameState.currentPlayer) return;
+            let goldCount = (gameState.currentPlayer===1) ? matchData.p1GoldHearts : matchData.p2GoldHearts;
+            if (goldCount <= 0) return;
+            if (gameState.currentPlayer===1) matchData.p1GoldHearts--;
+            else matchData.p2GoldHearts--;
+            gameState.goldPowerUsed = true;
+            saveMatchData();
+            updateUI();
+            playTone(523.25,0.25,0.25);
+            setTimeout(()=>playTone(659.25,0.3,0.25),120);
+            if (navigator.vibrate) navigator.vibrate(120);
+            activateWildcardBonus(true);
+        }
 
-        function endGame() { /* igual que antes, pero al terminar limpiar listeners */ }
+        function endGame() {
+            stopMusic();
+            let w = "Empate", winnerId = 0;
+            if (gameState.p1.score > gameState.p2.score) { w = gameState.p1.name; winnerId = 1; }
+            else if (gameState.p2.score > gameState.p1.score) { w = gameState.p2.name; winnerId = 2; }
+            if (w !== "Empate") {
+                playVictoryMusic(); throwConfetti();
+                document.getElementById('p'+winnerId+'-badge').classList.add('winner-badge');
+                document.getElementById('winner-name-text').textContent = w;
+                document.getElementById('victory-overlay').style.display = 'flex';
+                let currentHearts = (winnerId===1) ? matchData.p1Hearts : matchData.p2Hearts;
+                if (engine) {
+                    const { Composite, World } = Matter;
+                    const bodies = Composite.allBodies(engine.world);
+                    bodies.forEach(b => { if(['heart','activeHeart','goldHeart'].includes(b.label)) World.remove(engine.world, b); });
+                }
+                refillPot(currentHearts);
+                setTimeout(() => {
+                    dropWinningHeart();
+                    if (winnerId===1) matchData.p1Hearts++; else matchData.p2Hearts++;
+                    let newCount = (winnerId===1) ? matchData.p1Hearts : matchData.p2Hearts;
+                    if (newCount >= HEART_LIMIT) {
+                        if (winnerId===1) { matchData.p1Hearts = 0; matchData.p1GoldHearts++; }
+                        else { matchData.p2Hearts = 0; matchData.p2GoldHearts++; }
+                        saveMatchData(); updateUI();
+                        setTimeout(() => triggerGoldExplosion(winnerId), 1200);
+                    } else { saveMatchData(); updateUI(); setTimeout(() => fillPotWithGoldHearts(winnerId), 1000); }
+                }, 500);
+            } else playTieSound();
+            matchData.history.push({ p1: gameState.p1.score, p2: gameState.p2.score });
+            saveMatchData(); updateUI(); speak(w==="Empate"?"Empate":"Gana "+w);
+            if (isMultiplayer) {
+                if (remoteListener) db.ref("games/"+gameId).off();
+                setTimeout(() => { isMultiplayer=false; gameId=null; playerId=null; goToMainMenu(); }, 3000);
+            }
+        }
 
         function showCoinToss(winnerName) {
             const ov = document.getElementById('coin-overlay');
@@ -737,6 +789,15 @@
             alert("Modo local no implementado en esta demo, pero puedes jugar online.");
         }
 
+        // ========== FUNCIONES DE FÍSICA (simplificadas) ==========
+        let engine, render, runner;
+        function initPhysics() { /* opcional */ }
+        function refillPot(count) {}
+        function dropWinningHeart() {}
+        function dropGoldHeart() {}
+        function fillPotWithGoldHearts(playerId) {}
+        function triggerGoldExplosion(winnerId) {}
+
         // ========== UI COMÚN ==========
         function updateUI() {
             document.getElementById('p1-name-display').textContent = gameState.p1.name;
@@ -753,7 +814,7 @@
             matchData.history.forEach((m,i)=>{
                 let s1 = m.p1>m.p2?'💚':(m.p1<m.p2?'💔':'🤍');
                 let s2 = m.p2>m.p1?'💚':(m.p2<m.p1?'💔':'🤍');
-                tbody.insertAdjacentHTML('afterbegin', `有钱晚<td>${i+1}</td><td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td></tr>`);
+                tbody.insertAdjacentHTML('afterbegin', `有钱晚晚率为${i+1}晚晚率为<div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div>晚晚率为<div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div>晚晚率为`);
             });
             document.querySelector('.coin-front').textContent = gameState.p1.name;
             document.querySelector('.coin-back').textContent = gameState.p2.name;
@@ -775,6 +836,29 @@
         function exportToFile() { const dataStr=JSON.stringify(localStorage); const dataUri='data:application/json;charset=utf-8,'+encodeURIComponent(dataStr); let a=document.createElement('a'); a.setAttribute('href',dataUri); a.setAttribute('download','backup_memory.json'); a.click(); }
         function importFromFile(input) { let file=input.files[0]; if(!file)return; let reader=new FileReader(); reader.onload=function(e){ try{ let data=JSON.parse(e.target.result); localStorage.clear(); for(let k in data) localStorage.setItem(k,data[k]); alert("✅ Datos Cargados"); location.reload(); }catch(err){ alert("❌ Error"); } }; reader.readAsText(file); }
         function fullReset() { if(confirm("¿Borrar todo?")){ localStorage.clear(); location.reload(); } }
+        function limpiarTodasLasSalas() {
+            if (!confirm("⚠️ Esto eliminará TODAS las salas de juego en Firebase. ¿Estás seguro?")) return;
+            db.ref("games").once("value", (snapshot) => {
+                const games = snapshot.val();
+                if (!games) {
+                    alert("No hay salas para limpiar.");
+                    return;
+                }
+                let count = 0;
+                const updates = {};
+                for (let gameId in games) {
+                    if (gameId.startsWith("game_")) {
+                        updates[gameId] = null;
+                        count++;
+                    }
+                }
+                db.ref("games").update(updates).then(() => {
+                    alert(`✅ Se han eliminado ${count} salas.`);
+                }).catch(err => {
+                    alert("Error al limpiar: " + err.message);
+                });
+            });
+        }
         function loadMatchDataSafe() { try{ const json=localStorage.getItem(gameState.matchId); if(json){ const saved=JSON.parse(json); if(saved.p1Name.toLowerCase()===gameState.p2.name.toLowerCase()){ matchData={p1Name:saved.p2Name,p2Name:saved.p1Name,history:saved.history.map(h=>({p1:h.p2,p2:h.p1})),p1Hearts:saved.p2Hearts||0,p2Hearts:saved.p1Hearts||0,p1GoldHearts:saved.p2GoldHearts||0,p2GoldHearts:saved.p1GoldHearts||0}; } else matchData=saved; if(matchData.p1Hearts===undefined)matchData.p1Hearts=0; if(matchData.p2Hearts===undefined)matchData.p2Hearts=0; } else resetMatchData(); }catch(e){ resetMatchData(); } }
         function resetMatchData() { matchData={p1Name:gameState.p1.name,p2Name:gameState.p2.name,history:[],p1Hearts:0,p2Hearts:0,p1GoldHearts:0,p2GoldHearts:0}; }
         function saveMatchData() { try{ const data={p1Name:gameState.p1.name,p2Name:gameState.p2.name,history:matchData.history,p1Hearts:matchData.p1Hearts,p2Hearts:matchData.p2Hearts,p1GoldHearts:matchData.p1GoldHearts,p2GoldHearts:matchData.p2GoldHearts}; localStorage.setItem(gameState.matchId,JSON.stringify(data)); }catch(e){} }
