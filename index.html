@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        /* ========== ESTILOS COMPLETOS ========== */
+        /* ========== ESTILOS COMPLETOS (iguales que antes) ========== */
         :root {
             --bg-color: #2c3e50;
             --text-color: #ecf0f1;
@@ -34,7 +34,7 @@
             display: flex;
             flex-direction: column;
         }
-        /* Popups */
+        /* Popups (idénticos) */
         #setup-screen, #coin-overlay, #import-overlay, #victory-overlay, #history-overlay, #multiplayer-setup {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: none; flex-direction: column; justify-content: center; align-items: center;
@@ -197,7 +197,7 @@
     <div id="import-overlay"><h2>📂 GESTIÓN DE DATOS</h2><div style="width:80%;max-width:300px;"><button class="btn-file btn-save" onclick="exportToFile()">💾 Guardar Archivo</button><button class="btn-file btn-load" onclick="document.getElementById('file-upload').click()">📂 Cargar Archivo</button><input type="file" id="file-upload" style="display:none;" accept=".json" onchange="importFromFile(this)"><button class="btn-sec" onclick="closeImportExport()">Cerrar</button></div></div>
     <div id="coin-overlay"><h2>¿Quién empieza?</h2><div class="coin-container"><div class="coin" id="the-coin"><div class="coin-face coin-front">...</div><div class="coin-face coin-back">...</div></div></div><h3 id="coin-result">...</h3></div>
     <div id="victory-overlay"><div class="winner-title">¡VICTORIA!</div><div class="winner-name" id="winner-name-text">NOMBRE</div><div id="pot-container"></div><button class="btn-main" onclick="closeVictory()">SIGUIENTE</button></div>
-    <div id="history-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleHistory(false);toggleMenu(true);">←</div><h2>📜 HISTORIAL</h2><table class="history-table"><thead> <tr><th>#</th><th><span id="history-p1-name">J1</span></th><th><span id="history-p2-name">J2</span></th> </tr></thead><tbody id="history-body"></tbody></table><button class="btn-sec" onclick="toggleHistory(false)">Cerrar</button></div></div>
+    <div id="history-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleHistory(false);toggleMenu(true);">←</div><h2>📜 HISTORIAL</h2><table class="history-table"><thead>  <tr><th>#</th><th><span id="history-p1-name">J1</span></th><th><span id="history-p2-name">J2</span></th> </tr></thead><tbody id="history-body"></tbody></table><button class="btn-sec" onclick="toggleHistory(false)">Cerrar</button></div></div>
 
     <div class="top-bar">
         <div class="player-badge" id="p1-badge"><span class="p-name-live" id="p1-name-display">J1</span><span class="p-score-live" id="p1-score">0</span><div class="hearts-panel"><div class="heart-counter"><div class="icon-h icon-red"></div><span id="p1-red-count">0</span></div><div class="heart-counter"><div class="icon-h icon-gold"></div><span id="p1-gold-count">0</span></div></div></div>
@@ -213,7 +213,7 @@
     <div id="menu-overlay"><div class="history-container"><div class="back-arrow" onclick="toggleMenu(false)">←</div><h2>Menú</h2><button class="btn-sec" onclick="toggleMenu(false);goToMainMenu();">🏠 Menú Inicio</button><button class="btn-sec" onclick="toggleMenu(false);toggleHistory(true);">📜 Historial</button><button class="btn-sec" onclick="toggleMenu(false);toggleInfo(true);">ℹ Info</button><button class="btn-sec" onclick="toggleMenu(false)">Cerrar</button></div></div>
 
     <script>
-        // ========== FIREBASE CONFIGURACIÓN (TUS CREDENCIALES) ==========
+        // ========== FIREBASE CONFIGURACIÓN ==========
         const firebaseConfig = {
             apiKey: "AIzaSyBp41qQZvXPJHNY15FdxX1fcdAieUAedRg",
             authDomain: "memory-game-eyd.firebaseapp.com",
@@ -262,7 +262,9 @@
         let gameId = null;
         let playerId = null;
         let isMultiplayer = false;
-        let remoteListener = null;
+        let playersListener = null;
+        let movesListener = null;
+        let readyListener = null;
 
         // ========== FUNCIONES DE SONIDO (sin cambios) ==========
         const N = { c3:130.81,c4:261.63,d4:293.66,e4:329.63,f4:349.23,g4:392.00,a4:440.00,b4:493.88,c5:523.25,d5:587.33,e5:659.25,f5:698.46,g5:783.99,a5:880.00,b5:987.77,c6:1046.50 };
@@ -310,7 +312,7 @@
             boardCards.sort(() => Math.random() - 0.5);
             let cardStatus = new Array(20).fill(0);
 
-            // Estructura inicial (sin moves aún, se irán añadiendo)
+            // Estructura inicial
             db.ref("games/" + gameId).set({
                 players: { p1: playerName, p2: null },
                 theme: theme,
@@ -359,11 +361,20 @@
         }
 
         function startListening() {
-            // Escuchar cambios en el nodo ready para saber cuándo arrancar
-            db.ref("games/" + gameId + "/ready").on("value", (snap) => {
+            // Escuchar cambios en los jugadores (para que el anfitrión active ready)
+            playersListener = db.ref("games/" + gameId + "/players").on("value", (snap) => {
+                const players = snap.val();
+                if (players && players.p1 && players.p2 && playerId === 1 && !gameState.boardCards.length) {
+                    // El anfitrión detecta que ambos jugadores están presentes y marca la sala como lista
+                    db.ref("games/" + gameId + "/ready").set(true);
+                }
+            });
+
+            // Escuchar cuando ready se vuelve true (inicio de la partida)
+            readyListener = db.ref("games/" + gameId + "/ready").on("value", (snap) => {
                 const ready = snap.val();
-                if (ready === true) {
-                    // Cuando ambos están listos, cargar los datos de la sala
+                if (ready === true && !gameState.boardCards.length) {
+                    // Cargar los datos de la sala una vez
                     db.ref("games/" + gameId).once("value").then(snapshot => {
                         const data = snapshot.val();
                         if (!data) return;
@@ -388,10 +399,8 @@
                         updateActivePlayer();
 
                         if (playerId === 1) {
-                            // El anfitrión decide quién empieza aleatoriamente
                             const starter = Math.random() > 0.5 ? 1 : 2;
                             gameState.currentPlayer = starter;
-                            // Enviar movimiento de cambio de turno si es necesario (para que el otro se entere)
                             if (starter !== 1) {
                                 db.ref("games/" + gameId + "/moves").push({
                                     type: "turnChange",
@@ -401,7 +410,6 @@
                             }
                             showCoinToss(starter === 1 ? gameState.p1.name : gameState.p2.name);
                         } else {
-                            // El segundo jugador espera a que el anfitrión lance la moneda
                             document.getElementById('coin-overlay').style.display = 'flex';
                             document.getElementById('coin-result').textContent = 'Esperando al otro jugador...';
                         }
@@ -409,11 +417,10 @@
                 }
             });
 
-            // Escuchar movimientos
-            db.ref("games/" + gameId + "/moves").on("child_added", (snap) => {
+            // Escuchar movimientos (se añadirán durante la partida)
+            movesListener = db.ref("games/" + gameId + "/moves").on("child_added", (snap) => {
                 const move = snap.val();
                 if (!move) return;
-                // Ignorar movimientos propios
                 if (move.player === playerId) return;
 
                 if (move.type === "flip") {
@@ -462,22 +469,18 @@
         }
 
         function processMatch(move) {
-            // Actualizar puntuaciones y parejas restantes
             gameState.p1.score = move.p1Score;
             gameState.p2.score = move.p2Score;
             gameState.pairsLeft = move.pairsLeft;
-            // Marcar las cartas como matcheadas
             gameState.cardStatus[move.firstIdx] = 2;
             gameState.cardStatus[move.secondIdx] = 2;
             refreshBoardVisual();
             updateUI();
 
-            // Si el movimiento incluye cambio de turno (si no fue comodín, el jugador sigue jugando)
             if (move.currentPlayer !== undefined) {
                 gameState.currentPlayer = move.currentPlayer;
                 updateActivePlayer();
             }
-            // Si el juego terminó, invocar endGame (el que envió el movimiento ya lo hará)
             if (move.gameEnd) {
                 endGame();
             }
@@ -485,7 +488,6 @@
         }
 
         function processFail(move) {
-            // Voltear las cartas de nuevo
             gameState.cardStatus[move.firstIdx] = 0;
             gameState.cardStatus[move.secondIdx] = 0;
             refreshBoardVisual();
@@ -502,14 +504,12 @@
             if (gameState.cardStatus[idx] !== 0) return;
 
             if (isMultiplayer) {
-                // Enviar movimiento
                 db.ref("games/" + gameId + "/moves").push({
                     type: "flip",
                     index: idx,
                     player: playerId,
                     timestamp: Date.now()
                 });
-                // Procesamos localmente también (para que sea inmediato)
                 processFlip(idx);
             } else {
                 processFlip(idx);
@@ -518,7 +518,6 @@
 
         function matchSuccess() {
             playMatchSound();
-            // Marcar cartas como matcheadas
             gameState.cardStatus[gameState.firstCardIdx] = 2;
             gameState.cardStatus[gameState.secondCardIdx] = 2;
             refreshBoardVisual();
@@ -535,7 +534,6 @@
             checkMusicSpeed();
 
             if (isMultiplayer) {
-                // Enviar movimiento de acierto con estado actualizado
                 db.ref("games/" + gameId + "/moves").push({
                     type: "match",
                     p1Score: gameState.p1.score,
@@ -561,7 +559,6 @@
             let txt = p.failStreak>=2 ? getPhrase('failStreak',p.name) : getPhrase('fail',p.name);
             speak(txt);
 
-            // Voltear cartas
             gameState.cardStatus[gameState.firstCardIdx] = 0;
             gameState.cardStatus[gameState.secondCardIdx] = 0;
             refreshBoardVisual();
@@ -572,7 +569,6 @@
             updateUI();
 
             if (isMultiplayer) {
-                // Enviar movimiento de fallo con el nuevo turno
                 db.ref("games/" + gameId + "/moves").push({
                     type: "fail",
                     firstIdx: gameState.firstCardIdx,
@@ -745,7 +741,9 @@
             matchData.history.push({ p1: gameState.p1.score, p2: gameState.p2.score });
             saveMatchData(); updateUI(); speak(w==="Empate"?"Empate":"Gana "+w);
             if (isMultiplayer) {
-                if (remoteListener) db.ref("games/"+gameId).off();
+                if (playersListener) db.ref("games/"+gameId+"/players").off();
+                if (readyListener) db.ref("games/"+gameId+"/ready").off();
+                if (movesListener) db.ref("games/"+gameId+"/moves").off();
                 setTimeout(() => { isMultiplayer=false; gameId=null; playerId=null; goToMainMenu(); }, 3000);
             }
         }
@@ -774,7 +772,9 @@
         }
 
         function cancelMultiplayer() {
-            if (remoteListener) db.ref("games/"+gameId).off();
+            if (playersListener) db.ref("games/"+gameId+"/players").off();
+            if (readyListener) db.ref("games/"+gameId+"/ready").off();
+            if (movesListener) db.ref("games/"+gameId+"/moves").off();
             isMultiplayer = false;
             gameId = null;
             playerId = null;
@@ -812,7 +812,7 @@
             matchData.history.forEach((m,i)=>{
                 let s1 = m.p1>m.p2?'💚':(m.p1<m.p2?'💔':'🤍');
                 let s2 = m.p2>m.p1?'💚':(m.p2<m.p1?'💔':'🤍');
-                tbody.insertAdjacentHTML('afterbegin', `有钱晚看做${i+1}有钱晚看做<td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td></tr>`);
+                tbody.insertAdjacentHTML('afterbegin', `<tr><td>${i+1}</td><td><div class="heart-badge"><span class="heart-icon">${s1}</span><span class="heart-score">${m.p1}</span></div></td><td><div class="heart-badge"><span class="heart-icon">${s2}</span><span class="heart-score">${m.p2}</span></div></td></tr>`);
             });
             document.querySelector('.coin-front').textContent = gameState.p1.name;
             document.querySelector('.coin-back').textContent = gameState.p2.name;
