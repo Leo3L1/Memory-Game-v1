@@ -41,7 +41,7 @@
         }
 
         /* --- POPUPS --- */
-        #setup-screen, #coin-overlay, #import-overlay, #victory-overlay, #history-overlay, #confirm-overlay {
+        #setup-screen, #coin-overlay, #import-overlay, #victory-overlay, #history-overlay {
             position: fixed; 
             top: 0; 
             left: 0; 
@@ -66,11 +66,6 @@
             background: rgba(0,0,0,0.85); 
             backdrop-filter: blur(5px); 
         }
-        #confirm-overlay { 
-            background: rgba(0,0,0,0.7); 
-            backdrop-filter: blur(8px);
-            z-index: 9500;
-        }
         
         #victory-overlay { 
             background: rgba(15, 15, 20, 0.96); 
@@ -78,80 +73,6 @@
             z-index: 9000; 
             justify-content: flex-start; 
             padding-top: 50px;
-        }
-
-        .confirm-container {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            padding: 30px;
-            border-radius: 30px;
-            border: 3px solid var(--gold);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 30px rgba(255,215,0,0.3);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-            animation: confirmPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes confirmPop {
-            0% { transform: scale(0); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .confirm-title {
-            font-size: 2rem;
-            color: var(--gold);
-            margin-bottom: 20px;
-            text-shadow: 0 0 15px rgba(255,215,0,0.5);
-        }
-
-        .confirm-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-
-        .confirm-btn {
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            border: none;
-            border-radius: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            min-width: 120px;
-        }
-
-        .confirm-btn.yes {
-            background: #27ae60;
-            color: white;
-            box-shadow: 0 4px 0 #1e8449;
-        }
-
-        .confirm-btn.yes:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 0 #1e8449;
-        }
-
-        .confirm-btn.yes:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #1e8449;
-        }
-
-        .confirm-btn.no {
-            background: #e74c3c;
-            color: white;
-            box-shadow: 0 4px 0 #c0392b;
-        }
-
-        .confirm-btn.no:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 0 #c0392b;
-        }
-
-        .confirm-btn.no:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #c0392b;
         }
 
         .winner-title { 
@@ -1004,17 +925,6 @@
         <div class="gold-heart-3d"></div>
     </div>
 
-    <!-- Nuevo overlay de confirmación flotante -->
-    <div id="confirm-overlay">
-        <div class="confirm-container">
-            <div class="confirm-title">✨ ¿CONFIRMAR? / CONFIRM? ✨</div>
-            <div class="confirm-buttons">
-                <button class="confirm-btn yes" onclick="confirmNewRound()">✓ SÍ / YES</button>
-                <button class="confirm-btn no" onclick="cancelNewRound()">✗ NO</button>
-            </div>
-        </div>
-    </div>
-
     <div id="setup-screen">
         <h1 style="color:#f1c40f; margin-bottom:20px; font-size:2rem;">🐵 MEMORY</h1>
         <div class="input-group"><input type="text" id="p1-input" placeholder="Jugador 1 / Player 1"></div>
@@ -1105,7 +1015,7 @@
 
     <div class="bottom-bar">
         <div class="play-menu-wrapper">
-            <button id="play-btn" class="btn-game btn-next" onclick="playButtonSound(); showConfirmOverlay()">PLAY ▶</button>
+            <button id="play-btn" class="btn-game btn-next" onclick="playButtonSound(); initSystem()">PLAY ▶</button>
             <button id="menu-btn" class="btn-game" onclick="playButtonSound(); toggleMenu(true)">☰</button>
         </div>
 
@@ -1135,7 +1045,7 @@
             261.63, 329.63, 440.00, 523.25, 220.00, 349.23, 440.00, 523.25
         ];
 
-        const MENU_SPEED = 300; // Velocidad fija a 300ms
+        const MENU_SPEED = 300;
 
         // Temas disponibles
         const THEMES = {
@@ -1145,27 +1055,18 @@
             fruits: ['🍎','🍌','🍇','🍉','🍓','🍍','🥝','🍑','🍒','🥭']
         };
 
-        // Función para obtener la categoría de un emoji (útil para modo MIX)
         function getCategoryOfEmoji(emoji) {
             for (let key in THEMES) {
-                if (THEMES[key].includes(emoji)) {
-                    return key;
-                }
+                if (THEMES[key].includes(emoji)) return key;
             }
-            return null; // No debería ocurrir
+            return null;
         }
 
-        // Función para convertir emoji a ruta SVG
         function emojiToSVGPath(emoji, category) {
-            // Si es un comodín, no aplica
             if (emoji === 'WILDCARD') return '';
-            
-            // Convertir el emoji a su código Unicode (ej: '🐶' -> '1f436')
             let code = Array.from(emoji)
                 .map(e => e.codePointAt(0).toString(16).toLowerCase())
                 .join('-');
-            
-            // Ruta relativa desde el HTML (asumiendo que el HTML está en la raíz de V:\SVG)
             return `emojis/${category}/${code}.svg`;
         }
 
@@ -1209,7 +1110,7 @@
 
         let engine, render, runner;
 
-        // --- FUNCIONES DE MÚSICA DE MENÚ (fijada a 300ms) ---
+        // --- FUNCIONES DE MÚSICA DE MENÚ ---
         function startMenuMusic() {
             if (menuMusicInterval) return;
             initAudio();
@@ -1255,14 +1156,11 @@
             const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            
             osc.type = 'sine';
             osc.frequency.setValueAtTime(523.25, now);
             osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1);
-            
             gain.gain.setValueAtTime(0.1, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-            
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
@@ -1271,28 +1169,21 @@
 
         function playGoldFanfare() {
             if(!audioCtx) return;
-            
             const now = audioCtx.currentTime;
-            
             const notes = [523.25, 659.25, 783.99];
-            
             notes.forEach((freq, index) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                
                 osc.type = 'triangle';
                 osc.frequency.value = freq;
-                
                 gain.gain.setValueAtTime(0, now + index * 0.05);
                 gain.gain.linearRampToValueAtTime(0.25, now + index * 0.05 + 0.05);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.05 + 1.5);
-                
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start(now + index * 0.05);
                 osc.stop(now + index * 0.05 + 1.5);
             });
-            
             setTimeout(() => {
                 const arpNotes = [523.25, 659.25, 783.99, 1046.50];
                 arpNotes.forEach((freq, i) => {
@@ -1413,7 +1304,6 @@
         function fillPotWithGoldHearts(playerId) {
             const { Composite, World } = Matter;
             const goldCount = (playerId === 1) ? matchData.p1GoldHearts : matchData.p2GoldHearts;
-            
             if(engine){
                 const bodies = Composite.allBodies(engine.world);
                 bodies.forEach(b => {
@@ -1422,7 +1312,6 @@
                     }
                 });
             }
-            
             for(let i = 0; i < goldCount; i++) {
                 setTimeout(() => dropGoldHeart(), i * 200);
             }
@@ -1449,16 +1338,12 @@
             setTimeout(() => {
                 bodies.forEach(b => { if(['heart', 'activeHeart', 'goldHeart'].includes(b.label)) World.remove(engine.world, b); });
                 pot.classList.remove('pot-flash');
-                
                 giantContainer.classList.remove('animate-heart-sequence');
                 giantContainer.style.display = 'none';
-
                 playTone(523.25, 0.3, 0.25);
                 setTimeout(()=>playTone(659.25,0.4,0.25),150);
                 setTimeout(()=>playTone(783.99,0.6,0.3),300);
-
                 fillPotWithGoldHearts(winnerId);
-                
             }, 3000);
         }
 
@@ -1525,7 +1410,7 @@
             playButtonSound(); 
             stopMusic(); 
             document.getElementById('setup-screen').style.display = 'flex'; 
-            startMenuMusic(); // Volvemos a Bach al ir al menú
+            startMenuMusic();
         }
 
         function triggerNextRound() {
@@ -1571,12 +1456,11 @@
 
         function createBoard() {
             const t = document.getElementById('tablero'); t.innerHTML = '';
-            // Selección: 9 del pool + 1 wildcard, luego duplicar (total 20 cartas, 2 wildcards)
             let pool = (gameState.selectedTheme === 'mix') ? [...THEMES.animals, ...THEMES.flags, ...THEMES.objects, ...THEMES.fruits] : THEMES[gameState.selectedTheme];
             pool.sort(() => 0.5 - Math.random());
             let selection = pool.slice(0, 9); 
-            selection.push('WILDCARD'); // Añadimos 1 wildcard
-            let items = [...selection, ...selection]; // Duplicamos: ahora hay 2 wildcards
+            selection.push('WILDCARD');
+            let items = [...selection, ...selection];
             items.sort(() => 0.5 - Math.random());
             let themeOptions = ['theme-silver','theme-gold','theme-blue','theme-red'];
             let randomTheme = themeOptions[Math.floor(Math.random()*themeOptions.length)];
@@ -1590,43 +1474,31 @@
                     c.classList.add('wildcard-card');
                     c.innerHTML = `<div class="front-face wildcard-front">💛</div><div class="back-face ${randomTheme}"></div>`;
                 } else {
-                    // Determinar la categoría correcta (especialmente importante en modo MIX)
                     let category;
                     if (gameState.selectedTheme === 'mix') {
                         category = getCategoryOfEmoji(icon);
-                        // Si por alguna razón no encuentra categoría (no debería), usar animales por defecto
                         if (!category) category = 'animals';
                     } else {
                         category = gameState.selectedTheme;
                     }
                     const svgPath = emojiToSVGPath(icon, category);
                     
-                    // Crear elementos de forma segura
                     const frontDiv = document.createElement('div');
                     frontDiv.className = 'front-face';
-                    
                     const img = document.createElement('img');
                     img.className = 'emoji-svg';
                     img.alt = icon;
                     img.src = svgPath;
-                    
-                    // Manejo de error mejorado
                     img.onerror = function() {
-                        // Ocultar la imagen
                         this.style.display = 'none';
-                        // Crear fallback de texto con el emoji
                         const fallbackSpan = document.createElement('span');
                         fallbackSpan.className = 'emoji-fallback';
                         fallbackSpan.textContent = icon;
                         this.parentElement.appendChild(fallbackSpan);
-                        console.warn('SVG no cargado:', svgPath, 'para emoji:', icon);
                     };
-                    
                     frontDiv.appendChild(img);
-                    
                     const backDiv = document.createElement('div');
                     backDiv.className = `back-face ${randomTheme}`;
-                    
                     c.appendChild(frontDiv);
                     c.appendChild(backDiv);
                 }
@@ -1766,7 +1638,6 @@
                     setTimeout(() => {
                         valueMap[val][0].classList.add('flip');
                         valueMap[val][1].classList.add('flip');
-                        
                         setTimeout(() => {
                             valueMap[val][0].classList.add('matched');
                             valueMap[val][1].classList.add('matched');
