@@ -174,15 +174,6 @@
             cursor: pointer; 
         }
 
-        /* Botón probar voz */
-        .btn-test-voice {
-            background: #f39c12;
-            margin-top: 10px;
-            margin-bottom: 0;
-            font-size: 1rem;
-            padding: 10px 20px;
-        }
-
         /* --- UI TABLERO (HEADER) --- */
         .top-bar {
             flex: 0 0 auto; 
@@ -949,7 +940,6 @@
             </select>
         </div>
         <button class="btn-main" onclick="playButtonSound(); initSystem()">PLAY</button>
-        <button class="btn-main btn-test-voice" onclick="testVoice()">🔊 Probar Voz / Test Voice</button>
     </div>
 
     <div id="import-overlay">
@@ -1251,27 +1241,6 @@
                     console.error("Error al intentar hablar:", e);
                 }
             }, 50);
-        }
-        
-        // Función para probar la voz desde el menú
-        function testVoice() {
-            playButtonSound();
-            // Inicializar audio si es necesario
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            // Forzar la carga del sistema de voz
-            if (window.speechSynthesis) {
-                // Pequeño truco para activar la voz en tablets
-                window.speechSynthesis.cancel();
-                const testMsg = new SpeechSynthesisUtterance("Prueba de voz. El juego Memory Battle está listo.");
-                testMsg.lang = 'es-ES';
-                testMsg.rate = 1.2;
-                window.speechSynthesis.speak(testMsg);
-                speak("Prueba de voz. El juego Memory Battle está listo.");
-            } else {
-                alert("Tu navegador no soporta síntesis de voz.");
-            }
         }
 
         function initSystem() {
