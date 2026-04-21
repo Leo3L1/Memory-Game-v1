@@ -1102,10 +1102,13 @@
             goldPowerUsed: false
         };
 
+        // MODIFICADO: AÑADIDO p1Wins y p2Wins
         let matchData = { 
             p1Name: "", p2Name: "", history: [], 
             p1Hearts: 0, p2Hearts: 0, 
-            p1GoldHearts: 0, p2GoldHearts: 0
+            p1GoldHearts: 0, p2GoldHearts: 0,
+            p1Wins: 0,
+            p2Wins: 0
         };
 
         let engine, render, runner;
@@ -1717,8 +1720,18 @@
         function endGame() {
             stopMusic();
             let w = "Empate"; let msg = "Empate."; let winnerId = 0;
-            if(gameState.p1.score >gameState.p2.score) { w = gameState.p1.name; winnerId = 1; msg="Gana " + w; } 
-            else if(gameState.p2.score >gameState.p1.score) { w = gameState.p2.name; winnerId = 2; msg="Gana " + w;}
+            if(gameState.p1.score > gameState.p2.score) { 
+                w = gameState.p1.name; 
+                winnerId = 1; 
+                msg="Gana " + w; 
+                matchData.p1Wins++;
+            } 
+            else if(gameState.p2.score > gameState.p1.score) { 
+                w = gameState.p2.name; 
+                winnerId = 2; 
+                msg="Gana " + w;
+                matchData.p2Wins++;
+            }
             
             if(w !== "Empate") {
                 playVictoryMusic(); throwConfetti();
@@ -1812,21 +1825,39 @@
                         matchData = {
                             p1Name: saved.p2Name, p2Name: saved.p1Name, history: saved.history.map(h => ({ p1: h.p2, p2: h.p1 })),
                             p1Hearts: saved.p2Hearts || 0, p2Hearts: saved.p1Hearts || 0,
-                            p1GoldHearts: saved.p2GoldHearts || 0, p2GoldHearts: saved.p1GoldHearts || 0
+                            p1GoldHearts: saved.p2GoldHearts || 0, p2GoldHearts: saved.p1GoldHearts || 0,
+                            p1Wins: saved.p2Wins || 0, p2Wins: saved.p1Wins || 0
                         };
-                    } else { matchData = saved; }
+                    } else { 
+                        matchData = saved; 
+                    }
                     if(matchData.p1Hearts === undefined) matchData.p1Hearts = 0;
                     if(matchData.p2Hearts === undefined) matchData.p2Hearts = 0;
+                    if(matchData.p1Wins === undefined) matchData.p1Wins = 0;
+                    if(matchData.p2Wins === undefined) matchData.p2Wins = 0;
                 } else { resetMatchData(); }
             } catch (e) { resetMatchData(); }
         }
-        function resetMatchData() { matchData = { p1Name: gameState.p1.name, p2Name: gameState.p2.name, history: [], p1Hearts: 0, p2Hearts: 0, p1GoldHearts: 0, p2GoldHearts: 0 }; }
+        function resetMatchData() { 
+            matchData = { 
+                p1Name: gameState.p1.name, 
+                p2Name: gameState.p2.name, 
+                history: [], 
+                p1Hearts: 0, 
+                p2Hearts: 0, 
+                p1GoldHearts: 0, 
+                p2GoldHearts: 0,
+                p1Wins: 0,
+                p2Wins: 0
+            }; 
+        }
         function saveMatchData() {
             try {
                 const data = {
                     p1Name: gameState.p1.name, p2Name: gameState.p2.name, history: matchData.history,
                     p1Hearts: matchData.p1Hearts, p2Hearts: matchData.p2Hearts,
-                    p1GoldHearts: matchData.p1GoldHearts, p2GoldHearts: matchData.p2GoldHearts
+                    p1GoldHearts: matchData.p1GoldHearts, p2GoldHearts: matchData.p2GoldHearts,
+                    p1Wins: matchData.p1Wins, p2Wins: matchData.p2Wins
                 };
                 localStorage.setItem(gameState.matchId, JSON.stringify(data));
             } catch (e) {}
@@ -1863,8 +1894,9 @@
         }
 
         function updateUI() {
-            document.getElementById('p1-name-display').textContent = gameState.p1.name;
-            document.getElementById('p2-name-display').textContent = gameState.p2.name;
+            // Mostrar nombre + número de victorias en header
+            document.getElementById('p1-name-display').textContent = `${gameState.p1.name} 🏆${matchData.p1Wins}`;
+            document.getElementById('p2-name-display').textContent = `${gameState.p2.name} 🏆${matchData.p2Wins}`;
             
             document.getElementById('p1-red-count').innerText = matchData.p1Hearts + "/" + HEART_LIMIT;
             document.getElementById('p1-gold-count').innerText = matchData.p1GoldHearts;
@@ -1872,8 +1904,9 @@
             document.getElementById('p2-red-count').innerText = matchData.p2Hearts + "/" + HEART_LIMIT;
             document.getElementById('p2-gold-count').innerText = matchData.p2GoldHearts;
 
-            document.getElementById('history-p1-name').textContent = gameState.p1.name;
-            document.getElementById('history-p2-name').textContent = gameState.p2.name;
+            // Mostrar en historial también las victorias totales
+            document.getElementById('history-p1-name').textContent = `${gameState.p1.name} (🏆${matchData.p1Wins})`;
+            document.getElementById('history-p2-name').textContent = `${gameState.p2.name} (🏆${matchData.p2Wins})`;
 
             const tbody = document.getElementById('history-body'); tbody.innerHTML = '';
             matchData.history.forEach((m, i) => {
